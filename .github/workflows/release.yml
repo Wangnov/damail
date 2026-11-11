@@ -1,0 +1,128 @@
+# 发布：推送 v* 标签后自动运行（标签由 pnpm release 创建，见 https://damail.app/docs/releasing/）
+#   1. 检查：类型检查 + 服务端测试，失败就不发布
+#   2. 构建 Docker 镜像（linux/amd64 + linux/arm64）推到 GHCR：ghcr.io/<owner>/damail:v0.2.0、0.2.0、0.2、latest
+#   3. 用标签附注创建 GitHub Release，部署好的 DaMail 据此提示「有新版本」
+# 预发布版本（标签带「-」，例如 v0.3.0-beta.1）不更新 latest，Release 标记为预发布，不会提示给用户。
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 检查
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: damail
+          POSTGRES_PASSWORD: damail
+          POSTGRES_DB: damail
+        ports:
+          - 55434:5432
+        options: >-
+          --health-cmd "pg_isready -U damail"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  release:
+    name: 镜像和 Release
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # checkout 在标签触发时会把附注标签取成轻量标签，重新取一次才读得到附注（更新说明）
+      - run: git fetch --force --tags origin
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 版本信息和更新说明
+        id: info
+        run: |
+          image="ghcr.io/$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+          # 镜像里构建时没有 .git：先写好版本号和更新日志，构建前端时读这个文件
+          node web/scripts/release-info.mjs > web/release.json
+          node web/scripts/release-info.mjs --notes "$TAG" --image "$image" > "$RUNNER_TEMP/notes.md"
+          {
+            echo "image=$image"
+            echo "title=$(node web/scripts/release-info.mjs --title "$TAG")"
+            if [[ "$TAG" == *-* ]]; then echo "prerelease=true"; else echo "prerelease=false"; fi
+          } >> "$GITHUB_OUTPUT"
+          echo "版本 $(node -p "require('./web/release.json').version")"
+          cat "$RUNNER_TEMP/notes.md"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.info.outputs.image }}
+          # v0.2.0、0.2.0、0.2；正式版本才更新 latest
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          flavor: |
+            latest=${{ steps.info.outputs.prerelease == 'false' }}
+          labels: |
+            org.opencontainers.image.title=DaMail
+            org.opencontainers.image.description=Self-hosted mail hub with MCP and REST API for AI agents
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ steps.info.outputs.title }}
+          PRERELEASE: ${{ steps.info.outputs.prerelease }}
+        run: |
+          flags=()
+          [[ "$PRERELEASE" == true ]] && flags+=(--prerelease --latest=false)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # 重新运行时只更新正文
+            gh release edit "$TAG" --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create "$TAG" --verify-tag --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md" "${flags[@]}"
+          fi

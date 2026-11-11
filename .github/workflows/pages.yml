@@ -1,0 +1,55 @@
+# 官网和文档：website/ 有改动并推送到 main 时构建，部署到 GitHub Pages（https://damail.app/）
+# 第一次使用前：仓库 Settings → Pages → Build and deployment → Source 选「GitHub Actions」
+# 自定义域名：website/public/CNAME 已写好 damail.app；在 Settings → Pages 填同一个域名并勾选 Enforce HTTPS，
+# DNS 给 damail.app 加 GitHub Pages 的 4 条 A 记录（185.199.108-111.153），www 加 CNAME 指向 gopkg-dev.github.io
+name: Website
+
+on:
+  push:
+    branches: [main]
+    paths: ['website/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 构建
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 文档页的「最后更新时间」取自 git 历史
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: website/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/dist
+
+  deploy:
+    name: 部署
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

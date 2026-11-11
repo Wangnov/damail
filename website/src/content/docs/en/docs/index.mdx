@@ -1,0 +1,56 @@
+---
+title: Introduction
+description: What DaMail is, what it does and who it is for
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+DaMail syncs all your mailboxes — Gmail, Outlook, iCloud, QQ, 163, company mail and more — into a **server you own**. You read, write and organize everything in one web app, and AI agents get safe access through **MCP** and a **REST API**.
+
+The name sounds like *dame* (だめ), Japanese for “nope”: no agent sends a single email without your OK.
+
+## What it solves
+
+<CardGrid>
+  <Card title="Too many inboxes" icon="email">
+    Work, personal and side projects each have their own. DaMail merges them into one inbox and replies from the right address automatically.
+  </Card>
+  <Card title="AI help without handing over accounts" icon="approve-check">
+    Agents only get credentials issued by DaMail, limited to the permissions and mailboxes you choose. Mail they write waits for your approval.
+  </Card>
+  <Card title="Important mail gets buried" icon="star">
+    AI categorizes mail, sets priority, flags what needs a reply and extracts codes, bills and tracking numbers. Rules push what matters to your phone.
+  </Card>
+  <Card title="Your data, your server" icon="seti:lock">
+    Self-hosted, with encrypted credentials. AI is off by default, works with local models, and nothing goes through a third-party service.
+  </Card>
+</CardGrid>
+
+## Features
+
+| Area | What you get |
+|---|---|
+| Sync and reading | Real-time IMAP IDLE, threading, cross-folder dedup, legacy encodings and CJK search, sandboxed HTML rendering |
+| Compose and organize | Rich-text compose, signatures, undo send, scheduled send, draft approval, subscription management — all written back to your mail server |
+| AI features | Mail analysis, categories and labels, AI search, the AI assistant, translation, usage and cost tracking |
+| Automation | Inbox rules, notification channels, daily and weekly reports, analytics, awaiting-reply tracking and follow-ups |
+| Open API | MCP (Streamable HTTP), REST API, scoped API keys, MCP OAuth for ChatGPT, Claude Duet, Grok Bot, Meta Muse and others, webhooks |
+
+## Architecture
+
+DaMail is a Node.js service plus a PostgreSQL database, shipped as one Docker image:
+
+- **Server**: Hono, Drizzle ORM and imapflow — sync, sending, the AI job queue, MCP and the REST API
+- **Web app**: React and Ant Design, served by the server
+- **Data**: the mail index and settings live in PostgreSQL, raw messages and attachments in the data directory; mailbox credentials are encrypted with `MASTER_KEY`
+
+## Start here
+
+<CardGrid>
+  <LinkCard title="Quick start" description="Deploy with Docker Compose in ten minutes" href="/en/docs/quick-start/" />
+  <LinkCard title="Mailboxes" description="App passwords and OAuth for each provider" href="/en/docs/mailboxes/" />
+  <LinkCard title="Models" description="Connect Claude, DeepSeek or a local model to turn on AI" href="/en/docs/ai/models/" />
+  <LinkCard title="Subscriptions" description="Find newsletters you rarely open and unsubscribe in one click" href="/en/docs/subscriptions/" />
+  <LinkCard title="AI assistants" description="Let Claude Duet, ChatGPT dots, Grok Bot and Meta Muse manage your mail" href="/en/docs/assistants/" />
+  <LinkCard title="MCP" description="Let Claude, Cursor and other agents use your mail safely" href="/en/docs/mcp/" />
+</CardGrid>

@@ -1,0 +1,118 @@
+/**
+ * AI 渠道并发上限和限流暂停（services/ai-limit.ts、trackAi）。不调用真实模型。
+ */
+import assert from 'node:assert/strict';
+import { after, before, beforeEach, describe, test } from 'node:test';
+import { setup, type Env } from './helpers.js';
+
+let env: Env;
+let limit: typeof import('../src/services/ai-limit.js');
+let usage: typeof import('../src/services/ai-usage.js');
+
+before(async () => {
+  env = await setup();
+  limit = await import('../src/services/ai-limit.js');
+  usage = await import('../src/services/ai-usage.js');
+});
+
+after(async () => {
+  await env?.close();
+});
+
+beforeEach(() => limit.resetAiGates());
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const channel = (concurrency: number | null) => ({ channelId: 'c1', channelName: 'test', provider: 'openai' as const, model: 'm', price: null, concurrency });
+
+describe('并发上限', () => {
+  test('同一渠道同时最多 N 个请求，其余排队；不同渠道互不影响', async () => {
+    let active = 0;
+    let peak = 0;
+    const call = (c: ReturnType<typeof channel>) =>
+      usage.trackAi(c, 'test', async () => {
+        active++;
+        peak = Math.max(peak, active);
+        await sleep(30);
+        active--;
+        return 1;
+      });
+    await Promise.all(Array.from({ length: 6 }, () => call(channel(2))));
+    assert.equal(peak, 2);
+
+    peak = 0;
+    await Promise.all(Array.from({ length: 6 }, () => call(channel(null))));
+    assert.equal(peak, 6, '不限制时全部同时进行');
+
+    const other = { ...channel(1), channelId: 'c2' };
+    const release = await limit.acquireAiSlot(other);
+    const t0 = Date.now();
+    await call(channel(1));
+    assert.ok(Date.now() - t0 < 200, '别的渠道占满不影响这个渠道');
+    release();
+  });
+
+  test('中止时退出排队', async () => {
+    const release = await limit.acquireAiSlot(channel(1));
+    const ac = new AbortController();
+    const waiting = limit.acquireAiSlot(channel(1), ac.signal);
+    await sleep(10);
+    assert.equal(limit.aiGateState('c1')?.waiting, 1);
+    ac.abort();
+    await assert.rejects(waiting);
+    assert.equal(limit.aiGateState('c1')?.waiting, 0);
+    release();
+    assert.equal(limit.aiGateState('c1')?.active, 0);
+  });
+});
+
+describe('限流', () => {
+  test('429 后整个渠道暂停（按 Retry-After），暂停结束自动重试成功', async () => {
+    let calls = 0;
+    const t0 = Date.now();
+    const out = await usage.trackAi(channel(null), 'test', async () => {
+      calls++;
+      if (calls === 1) throw new limit.RateLimitError('429', 150);
+      return 'ok';
+    });
+    assert.equal(out, 'ok');
+    assert.equal(calls, 2);
+    assert.ok(Date.now() - t0 >= 140, `要等 Retry-After 再重试：${Date.now() - t0}ms`);
+  });
+
+  test('暂停期间同渠道的其他请求也等着，不再打到服务商', async () => {
+    limit.noteRateLimited('c1', 120);
+    const st = limit.aiChannelStatus().c1!;
+    assert.ok(st.pausedUntil && st.limitedAt && st.limitedCount === 1, '状态里要有暂停结束时间和限流次数');
+    const t0 = Date.now();
+    await usage.trackAi(channel(null), 'test', async () => 1);
+    assert.ok(Date.now() - t0 >= 110, '暂停期间的请求要等');
+  });
+
+  test('一直被限流：重试几次后报错；其他错误不重试', async () => {
+    let calls = 0;
+    await assert.rejects(
+      usage.trackAi(channel(null), 'test', async () => {
+        calls++;
+        throw new limit.RateLimitError('429', 10);
+      }),
+      limit.RateLimitError,
+    );
+    assert.equal(calls, 3);
+    calls = 0;
+    await assert.rejects(
+      usage.trackAi(channel(null), 'test', async () => {
+        calls++;
+        throw new Error('bad request');
+      }),
+    );
+    assert.equal(calls, 1);
+  });
+
+  test('Retry-After：秒数和日期', () => {
+    assert.equal(limit.parseRetryAfter('3'), 3000);
+    assert.equal(limit.parseRetryAfter(null), undefined);
+    assert.equal(limit.parseRetryAfter('abc'), undefined);
+    const ms = limit.parseRetryAfter(new Date(Date.now() + 5000).toUTCString())!;
+    assert.ok(ms > 3000 && ms <= 5000, String(ms));
+  });
+});

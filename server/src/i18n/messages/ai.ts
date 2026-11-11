@@ -1,0 +1,63 @@
+const zh = {
+  unanalyzed: '未分析',
+  openaiCompat: 'OpenAI 兼容',
+  // 翻译的默认目标语言
+  defaultTranslateLanguage: '简体中文',
+  errors: {
+    channelMissing: '选择的渠道不存在，请重新选择模型',
+    baseUrlRequired: '请填写接口地址（Base URL）',
+    connectFailed: (msg: string) => `无法连接 AI 接口：${msg}`,
+    modelsFailed: (status: number, text: string) => `获取模型列表失败 ${status}：${text}`,
+    modelsNotJson: '模型列表不是 JSON，接口可能不支持 /models',
+    noModels: '上游没有返回任何模型',
+    noApiKey: '未配置 API Key',
+    invalidKey: 'API Key 无效',
+    forbidden: (msg: string) => `没有权限：${msg}`,
+    modelNotFound: (msg: string) => `模型不存在：${msg}`,
+    badRequest: (msg: string) => `请求无效：${msg}`,
+    rateLimited: 'AI 接口限流，稍后重试',
+    apiError: (status: number | string | undefined, msg: string) => `AI 接口错误 ${status ?? ''}：${msg}`,
+    refusedEmail: '模型拒绝处理这封邮件',
+    refused: '模型拒绝处理这个请求',
+    truncated: '输出被截断（max_tokens）',
+    unparsable: '模型输出无法解析',
+    noContent: 'AI 接口没有返回内容',
+    notJson: (raw: string) => `模型输出不是 JSON：${raw}`,
+    badShape: (msg: string | undefined) => `模型输出格式不对：${msg ?? ''}`,
+    // 网页按这句话识别「AI 没启用」，英文里要保留 AI is not enabled
+    disabled: 'AI 未启用',
+    emptyResponse: '模型没有返回内容',
+  },
+};
+
+const en: typeof zh = {
+  unanalyzed: 'Not analyzed',
+  openaiCompat: 'OpenAI-compatible',
+  defaultTranslateLanguage: 'English',
+  errors: {
+    channelMissing: 'The selected channel no longer exists. Choose the model again',
+    baseUrlRequired: 'Enter the API base URL',
+    connectFailed: (msg: string) => `Could not connect to the AI API: ${msg}`,
+    modelsFailed: (status: number, text: string) => `Failed to fetch models (${status}): ${text}`,
+    modelsNotJson: "The model list isn't JSON; the API may not support /models",
+    noModels: 'Upstream returned no models',
+    noApiKey: 'No API key configured',
+    invalidKey: 'Invalid API key',
+    forbidden: (msg: string) => `Permission denied: ${msg}`,
+    modelNotFound: (msg: string) => `Model not found: ${msg}`,
+    badRequest: (msg: string) => `Invalid request: ${msg}`,
+    rateLimited: 'AI API rate limited. Will retry later',
+    apiError: (status: number | string | undefined, msg: string) => `AI API error ${status ?? ''}: ${msg}`,
+    refusedEmail: 'The model refused to process this email',
+    refused: 'The model refused this request',
+    truncated: 'Output was truncated (max_tokens)',
+    unparsable: "Couldn't parse the model output",
+    noContent: 'The AI API returned no content',
+    notJson: (raw: string) => `Model output is not JSON: ${raw}`,
+    badShape: (msg: string | undefined) => `Model output has the wrong format: ${msg ?? ''}`,
+    disabled: 'AI is not enabled',
+    emptyResponse: 'The model returned no content',
+  },
+};
+
+export default { zh, en };

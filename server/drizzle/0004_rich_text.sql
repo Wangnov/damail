@@ -1,0 +1,1 @@
+ALTER TABLE "drafts" ADD COLUMN "body_html" text;

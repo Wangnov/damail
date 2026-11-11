@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%231677ff' d='M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2m0 4-8 5-8-5V6l8 5 8-5z'/></svg>" />
+    <title>DaMail</title>
+    <script>
+      // 先按保存的外观设置明暗、主题色、组件大小、圆角、边框、玻璃效果和动画，避免脚本加载前闪一下（规则同 src/lib/theme.ts）
+      (function () {
+        var mode = null;
+        try {
+          mode = localStorage.getItem('damail.theme');
+        } catch (e) {}
+        var dark = mode === 'dark' || (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        try {
+          var accent = localStorage.getItem('damail.accent');
+          if (/^#[0-9a-f]{6}$/i.test(accent || '')) document.documentElement.style.setProperty('--mh-accent', accent);
+          var radius = { none: 0, small: 0.6, large: 1.4 }[localStorage.getItem('damail.radius')];
+          if (radius !== undefined) document.documentElement.style.setProperty('--mh-r', String(radius));
+          var border = localStorage.getItem('damail.border');
+          document.documentElement.dataset.border = border === 'soft' || border === 'strong' ? border : 'normal';
+          var locale = localStorage.getItem('damail.locale');
+          document.documentElement.lang = locale === 'en' || locale === 'zh-CN' ? locale : /^zh/i.test(navigator.language) ? 'zh-CN' : 'en';
+          var size = localStorage.getItem('damail.size');
+          document.documentElement.dataset.size = size === 'small' || size === 'large' ? size : 'middle';
+          document.documentElement.dataset.glass = localStorage.getItem('damail.glass') === 'off' ? 'off' : 'on';
+          document.documentElement.dataset.motion = localStorage.getItem('damail.motion') === 'off' ? 'off' : 'on';
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

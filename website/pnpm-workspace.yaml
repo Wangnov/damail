@@ -1,0 +1,6 @@
+# 官网是独立的 pnpm 工作区（和应用的 server / web 分开安装，不影响 Docker 构建）
+packages:
+  - .
+allowBuilds:
+  esbuild: true
+  sharp: true
