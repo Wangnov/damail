@@ -229,7 +229,7 @@ export const oauthRoutes = new Hono<Env>()
       loginFailed(c);
       return renderInteraction(p, c, details, L('用户名或密码错误', 'Incorrect username or password'), username);
     }
-    issueSession(c, user);
+    await issueSession(c, user.id);
     return c.redirect(`${INTERACTION_PATH}/${details.uid}`, 303);
   })
   .post(`${INTERACTION_PATH}/:uid/switch`, async (c) => {

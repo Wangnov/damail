@@ -116,7 +116,7 @@ export const authRoutes = new Hono<AppEnv>()
       return u;
     });
     if (!created) return c.json({ error: t().common.auth.alreadySetup }, 409);
-    issueSession(c, created);
+    await issueSession(c, created.id);
     await rememberUserLocale(created.id, created.locale as Locale);
     audit(`user:${created.id}`, 'auth.setup', { detail: { username: created.username } });
     return c.json(publicUser(created));
@@ -136,7 +136,7 @@ export const authRoutes = new Hono<AppEnv>()
       return c.json({ error: t().common.auth.wrongCredentials }, 401);
     }
     attemptSucceeded(keys);
-    issueSession(c, user);
+    await issueSession(c, user.id);
     audit(`user:${user.id}`, 'auth.login');
     return c.json(publicUser(user));
   })
@@ -160,10 +160,11 @@ export const authRoutes = new Hono<AppEnv>()
     }
     const [updated] = await db
       .update(users)
-      .set({ ...(renamed ? { username } : {}), ...(newPassword ? { passwordHash: await hashPassword(newPassword) } : {}) })
+      // 改密码时纪元也加一：其他设备的会话失效，并保证「纪元相同 = 密码哈希相同」，会话缓存只需比较纪元
+      .set({ ...(renamed ? { username } : {}), ...(newPassword ? { passwordHash: await hashPassword(newPassword), sessionEpoch: sql`${users.sessionEpoch} + 1` } : {}) })
       .where(eq(users.id, user.id))
       .returning();
-    if (newPassword) issueSession(c, updated!);
+    if (newPassword) await issueSession(c, updated!.id);
     audit(`user:${user.id}`, 'user.update', { detail: { username: renamed ? username : undefined, password: Boolean(newPassword) } });
     return c.json(publicUser(updated!));
   })

@@ -338,8 +338,10 @@ async function loopAnthropic(c: AssistantConfig, auth: AuthContext, system: stri
     let release: () => void;
     try {
       release = await acquireAiSlot(c, signal);
-    } catch {
-      return;
+    } catch (err) {
+      // 只有用户中止才安静结束；排队已满等错误交给上层，界面会显示原因
+      if (signal.aborted) return;
+      throw err;
     }
     // 每一轮请求单独记一条
     const started = Date.now();
@@ -443,8 +445,10 @@ async function loopOpenAI(c: AssistantConfig, auth: AuthContext, system: string,
     let release: () => void;
     try {
       release = await acquireAiSlot(c, signal);
-    } catch {
-      return;
+    } catch (err) {
+      // 只有用户中止才安静结束；排队已满等错误交给上层，界面会显示原因
+      if (signal.aborted) return;
+      throw err;
     }
     try {
       let res: Response;

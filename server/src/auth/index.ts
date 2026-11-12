@@ -31,28 +31,42 @@ const SESSION_TTL = 30 * 24 * 3600;
 
 // pv 是密码哈希和会话纪元的指纹：改密码或退出登录后，旧会话（包括其他设备上、被复制走的）全部失效
 type SessionPayload = { uid: number; exp: number; pv: string };
-type SessionUser = { id: number; passwordHash: string; sessionEpoch: number };
+// 改密码和退出登录都会让纪元加一，所以纪元相同就意味着密码哈希也相同
+type SessionState = { passwordHash: string; sessionEpoch: number };
 
 // 纪元为 0 时保持旧算法，升级后已登录的会话不受影响
-const sessionVersion = (u: Pick<SessionUser, 'passwordHash' | 'sessionEpoch'>) =>
-  sha256(u.sessionEpoch ? `${u.passwordHash}:${u.sessionEpoch}` : u.passwordHash).slice(0, 16);
-const versions = new Map<number, string>();
+const sessionVersion = (u: SessionState) => sha256(u.sessionEpoch ? `${u.passwordHash}:${u.sessionEpoch}` : u.passwordHash).slice(0, 16);
+const versions = new Map<number, { epoch: number; v: string }>();
 
-async function currentVersion(userId: number) {
-  let v = versions.get(userId);
-  if (v === undefined) {
-    const user = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { passwordHash: true, sessionEpoch: true } });
-    if (!user) return null;
-    v = sessionVersion(user);
-    versions.set(userId, v);
-  }
-  return v;
+/**
+ * 更新缓存的会话指纹，只允许往前走：纪元不小于缓存里的才覆盖。
+ * 读数据库和写缓存之间可能插进一次退出登录，晚到的旧数据不能把撤销后的状态改回去。
+ */
+function remember(userId: number, u: SessionState) {
+  const cur = versions.get(userId);
+  if (!cur || u.sessionEpoch >= cur.epoch) versions.set(userId, { epoch: u.sessionEpoch, v: sessionVersion(u) });
+  return versions.get(userId)!.v;
 }
 
-export function issueSession(c: Context, user: SessionUser) {
-  const pv = sessionVersion(user);
-  versions.set(user.id, pv);
-  const token = signSession({ uid: user.id, exp: Math.floor(Date.now() / 1000) + SESSION_TTL, pv } satisfies SessionPayload);
+const loadSessionState = (userId: number) =>
+  db.query.users.findFirst({ where: eq(users.id, userId), columns: { passwordHash: true, sessionEpoch: true } });
+
+async function currentVersion(userId: number) {
+  const cached = versions.get(userId);
+  if (cached) return cached.v;
+  const user = await loadSessionState(userId);
+  return user ? remember(userId, user) : null;
+}
+
+/**
+ * 签发会话。签名用的密码和纪元在这里重新从数据库读取，不用调用方手里的用户数据：
+ * 校验密码期间可能已经退出登录（纪元加一），用旧数据签发会让撤销失效。
+ */
+export async function issueSession(c: Context, userId: number) {
+  const user = await loadSessionState(userId);
+  if (!user) throw new Error(`user ${userId} not found`);
+  remember(userId, user);
+  const token = signSession({ uid: userId, exp: Math.floor(Date.now() / 1000) + SESSION_TTL, pv: sessionVersion(user) } satisfies SessionPayload);
   setCookie(c, COOKIE, token, {
     httpOnly: true,
     sameSite: 'Lax',
@@ -73,7 +87,7 @@ export async function revokeSessions(userId: number) {
     .set({ sessionEpoch: sql`${users.sessionEpoch} + 1` })
     .where(eq(users.id, userId))
     .returning({ passwordHash: users.passwordHash, sessionEpoch: users.sessionEpoch });
-  if (user) versions.set(userId, sessionVersion(user));
+  if (user) remember(userId, user);
   else versions.delete(userId);
 }
 

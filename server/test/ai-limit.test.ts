@@ -55,6 +55,17 @@ describe('并发上限', () => {
     release();
   });
 
+  test('排队已满时直接拒绝，错误可重试', async () => {
+    const { RetryableError } = await import('../src/services/jobs.js');
+    const release = await limit.acquireAiSlot(channel(1));
+    const ac = new AbortController();
+    const waiting = Array.from({ length: 200 }, () => limit.acquireAiSlot(channel(1), ac.signal).then((r) => r(), () => {}));
+    await assert.rejects(limit.acquireAiSlot(channel(1)), (err: unknown) => err instanceof limit.AiQueueFullError && err instanceof RetryableError);
+    ac.abort();
+    await Promise.all(waiting);
+    release();
+  });
+
   test('中止时退出排队', async () => {
     const release = await limit.acquireAiSlot(channel(1));
     const ac = new AbortController();

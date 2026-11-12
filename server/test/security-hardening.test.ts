@@ -237,6 +237,24 @@ describe('退出登录', () => {
     const again = await sessionBrowser('bob');
     assert.equal((await again.request('/api/v1/accounts')).status, 200);
   });
+
+  test('登录校验密码期间退出登录，之前复制走的 cookie 也不会重新生效', async () => {
+    for (let i = 0; i < 3; i++) {
+      const web = await sessionBrowser('bob');
+      const copied = new Browser(env.base);
+      copied.cookies = new Map(web.cookies);
+      // 登录先读出用户，再花时间校验密码；在这期间完成退出登录
+      const login = new Browser(env.base).request('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: 'bob', password: PASSWORD }),
+      });
+      await new Promise((r) => setTimeout(r, 15));
+      assert.equal((await web.request('/api/auth/logout', { method: 'POST', headers: { origin: env.base, 'x-damail': '1' } })).status, 200);
+      assert.equal((await login).status, 200);
+      assert.equal((await copied.request('/api/v1/accounts')).status, 401, `第 ${i + 1} 次`);
+    }
+  });
 });
 
 // 会清空用户表，放在最后

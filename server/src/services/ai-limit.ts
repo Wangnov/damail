@@ -69,7 +69,8 @@ export const DEFAULT_AI_CONCURRENCY = 10;
 // 每个渠道最多排队这么多请求，再多直接拒绝，避免等待中的请求占满内存
 const MAX_WAITERS = 200;
 
-export class AiQueueFullError extends Error {}
+// 可重试：后台任务稍后再试；网页助手直接把原因显示给用户
+export class AiQueueFullError extends RetryableError {}
 
 /** 占一个请求名额，返回释放函数；渠道暂停中会一直等到暂停结束 */
 export async function acquireAiSlot(c: Channel, signal?: AbortSignal): Promise<() => void> {
