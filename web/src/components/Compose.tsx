@@ -367,6 +367,8 @@ function ComposeDrawer({
   const [customAt, setCustomAt] = useState<Dayjs | null>(null);
 
   const send = async (sendAt?: Dayjs) => {
+    // 点击时界面上的附件快照：保存期间缓存可能被实时事件刷新（比如 Agent 刚加了附件），不能拿刷新后的缓存来比
+    const reviewedAttachments = (qc.getQueryData<Draft>(['draft', draftId])?.attachments ?? []).map((a) => a.path).join('\n');
     const v = form.getFieldsValue(true);
     if (!v.to?.length && !v.cc?.length && !v.bcc?.length) return message.warning(t.compose.needRecipients);
     if (!v.subject?.trim() && !v.body?.trim()) return message.warning(t.compose.emptyMail);
@@ -377,9 +379,8 @@ function ComposeDrawer({
       // 保存后的版本号随发送请求带上：保存之后草稿又被改过（比如 Agent 改了内容），服务器会拒绝发送
       const latest = saved.current;
       if (!latest) throw new Error(t.compose.draftChanged);
-      // 附件不在表单里，保存不会覆盖：和界面上显示的不一致就说明审阅期间被改过
-      const shown = qc.getQueryData<Draft>(['draft', draftId])?.attachments ?? [];
-      if (latest.attachments.map((a) => a.path).join('\n') !== shown.map((a) => a.path).join('\n')) {
+      // 附件不在表单里，保存不会覆盖：和点击时界面上的不一致就说明审阅期间被改过
+      if (latest.attachments.map((a) => a.path).join('\n') !== reviewedAttachments) {
         qc.setQueryData<Draft>(['draft', draftId], (old) => (old ? { ...old, attachments: latest.attachments } : old));
         throw new Error(t.compose.draftChanged);
       }

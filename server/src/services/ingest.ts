@@ -95,7 +95,8 @@ function messageBody(parsed: ParsedMail | null) {
 /** 按需补齐预览，只更新正文和附件；保留邮件 ID、会话、标记和已有分析。 */
 export async function restoreMessageContent(message: Message, source: Buffer): Promise<Message> {
   const parsed = await parseRaw(source);
-  if (message.messageId && parsed.messageId !== message.messageId)
+  // 入库时 Message-ID 去掉了 NUL，比较时要按同样的规则处理
+  if (message.messageId && stripNul(parsed.messageId ?? null) !== message.messageId)
     throw new ActionError(L('原始邮件标识已变化，请重新同步', 'The original Message-ID changed; sync the mailbox again'), 409);
   const { html, text, attachments } = messageBody(parsed);
   const rawPath = await storeRaw(message.accountId, source);
