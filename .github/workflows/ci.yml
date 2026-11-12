@@ -1,0 +1,46 @@
+# 持续集成：PR 和推送到 main 时运行类型检查 + 测试（和发布流程里的「检查」一致）
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 同一个 PR / 分支有新提交时取消还在跑的旧任务
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 检查
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: damail
+          POSTGRES_PASSWORD: damail
+          POSTGRES_DB: damail
+        ports:
+          - 55434:5432
+        options: >-
+          --health-cmd "pg_isready -U damail"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
