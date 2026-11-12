@@ -16,6 +16,7 @@ import { accountsUsingProxy, listProxies, proxyInput, proxyUrl, proxyUrlById, pr
 import { providers } from '../sync/providers.js';
 import { iconDomain, senderIcon } from '../services/sender-icons.js';
 import { L } from '../i18n/index.js';
+import { removeAccountRaw } from '../services/raw-gc.js';
 
 const accountInput = z.object({
   name: z.string().trim().min(1).max(100),
@@ -198,6 +199,8 @@ export const adminRoutes = new Hono<AppEnv>()
     const id = Number(c.req.param('id'));
     await syncEngine.stopAccount(id);
     await db.delete(accounts).where(eq(accounts.id, id));
+    // 邮件记录随邮箱级联删除，原始邮件文件也一起删掉
+    await removeAccountRaw(id).catch((err) => console.warn(`[raw] 删除邮箱 ${id} 的原始邮件失败`, err));
     return c.json({ ok: true });
   })
   .post('/accounts/:id/sync', (c) => {

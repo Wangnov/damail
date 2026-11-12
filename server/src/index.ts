@@ -9,6 +9,7 @@ import { loadMcpOAuthSettings } from './oauth/settings.js';
 import { startFollowUps, stopFollowUps } from './services/followups.js';
 import { startJobs, stopJobs } from './services/jobs.js';
 import { backfillListInfo } from './services/subscriptions.js';
+import { collectRawGarbage } from './services/raw-gc.js';
 import { syncBuiltins } from './services/catalog.js';
 import './services/notify.js';
 import './services/pipeline.js';
@@ -47,12 +48,21 @@ const runAuditPurge = () =>
     .catch((err) => console.warn('[audit] 清理失败', err));
 runAuditPurge();
 const auditPurge = setInterval(runAuditPurge, 6 * 3600_000);
+// 原始邮件文件不会随邮件删除（相同内容共用文件），每天扫一遍删掉没有引用的；启动 10 分钟后先跑一次
+const runRawGc = () =>
+  void collectRawGarbage()
+    .then((r) => (r.files || r.accounts) && console.log(`[raw] 清理了 ${r.files} 个原始邮件文件（${(r.bytes / 1024 / 1024).toFixed(1)} MB），${r.accounts} 个已删除邮箱的目录`))
+    .catch((err) => console.warn('[raw] 清理失败', err));
+const rawGcFirst = setTimeout(runRawGc, 10 * 60_000);
+const rawGc = setInterval(runRawGc, 24 * 3600_000);
 
 async function shutdown(signal: string) {
   console.log(`[app] 收到 ${signal}，正在关闭…`);
   server.close();
   clearInterval(oauthPurge);
   clearInterval(auditPurge);
+  clearTimeout(rawGcFirst);
+  clearInterval(rawGc);
   stopOutbox();
   stopJobs();
   stopReports();
