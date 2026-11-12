@@ -10,5 +10,6 @@ export function rewriteCids(html: string, attachments: Array<{ cid?: string | nu
     if (key && !cids.has(key)) cids.set(key, urlFor(att.index));
   }
   if (!cids.size) return html;
-  return html.replace(/cid:([^\s"'<>()]+)/gi, (m, id: string) => cids.get(id.toLowerCase()) ?? m);
+  // Content-ID 里不会有逗号：srcset 用逗号分隔候选图片，不能把它算进 cid
+  return html.replace(/cid:([^\s"'<>(),]+)/gi, (m, id: string) => cids.get(id.toLowerCase()) ?? m);
 }

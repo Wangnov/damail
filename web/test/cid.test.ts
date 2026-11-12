@@ -14,6 +14,11 @@ describe('rewriteCids', () => {
     assert.equal(out, '<img src="/att/1"><img src="cid:logo@x.more"><div style="background:url(/att/2)"></div>');
   });
 
+  test('srcset 里用逗号分隔的多张图都能替换', () => {
+    const out = rewriteCids('<img srcset="cid:first@example, cid:second@example 2x">', [{ cid: 'first@example', index: 1 }, { cid: 'second@example', index: 2 }], url);
+    assert.equal(out, '<img srcset="/att/1, /att/2 2x">');
+  });
+
   test('没有附件或没有匹配时原样返回', () => {
     assert.equal(rewriteCids('<img src="cid:a">', [], url), '<img src="cid:a">');
     assert.equal(rewriteCids('<img src="cid:a">', [{ cid: null, index: 0 }], url), '<img src="cid:a">');

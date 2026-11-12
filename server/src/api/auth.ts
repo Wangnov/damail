@@ -119,7 +119,7 @@ export const authRoutes = new Hono<AppEnv>()
       return u;
     });
     if (!created) return c.json({ error: t().common.auth.alreadySetup }, 409);
-    await issueSession(c, created.id);
+    await issueSession(c, created);
     await rememberUserLocale(created.id, created.locale as Locale);
     audit(`user:${created.id}`, 'auth.setup', { detail: { username: created.username } });
     return c.json(publicUser(created));
@@ -138,7 +138,8 @@ export const authRoutes = new Hono<AppEnv>()
       return c.json({ error: t().common.auth.wrongCredentials }, 401);
     }
     attemptSucceeded(keys);
-    await issueSession(c, user.id);
+    // 校验期间密码被改了：校验过的是旧密码，不签发
+    if (!(await issueSession(c, user))) return c.json({ error: t().common.auth.wrongCredentials }, 401);
     audit(`user:${user.id}`, 'auth.login');
     return c.json(publicUser(user));
   })
@@ -166,7 +167,7 @@ export const authRoutes = new Hono<AppEnv>()
       .set({ ...(renamed ? { username } : {}), ...(newPassword ? { passwordHash: await hashPassword(newPassword), sessionEpoch: sql`${users.sessionEpoch} + 1` } : {}) })
       .where(eq(users.id, user.id))
       .returning();
-    if (newPassword) await issueSession(c, updated!.id);
+    if (newPassword) await issueSession(c, updated!);
     audit(`user:${user.id}`, 'user.update', { detail: { username: renamed ? username : undefined, password: Boolean(newPassword) } });
     return c.json(publicUser(updated!));
   })
@@ -180,6 +181,8 @@ export const authRoutes = new Hono<AppEnv>()
     return c.json(publicUser(updated));
   })
   .post('/logout', async (c) => {
+    // 和其他写请求一样要求 x-damail 头：退出会让所有设备下线，不能被同站的其他页面伪造请求触发
+    if (c.req.header('x-damail') !== '1') return c.json({ error: 'missing x-damail header' }, 403);
     const uid = await readSession(c);
     if (uid) {
       await revokeSessions(uid);

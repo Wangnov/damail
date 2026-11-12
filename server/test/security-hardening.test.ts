@@ -330,6 +330,37 @@ describe('退出登录', () => {
   });
 });
 
+describe('会话签发和退出登录的保护', () => {
+  test('登录校验密码期间密码被改了，用旧密码登录不签发会话', async () => {
+    const { hashPassword } = await import('../src/lib/crypto.js');
+    const { eq, sql } = await import('drizzle-orm');
+    const { users } = env.schema;
+    const bob = await env.db.query.users.findFirst({ where: (u, { eq }) => eq(u.username, 'bob') });
+    const newHash = await hashPassword('another password 123');
+    const login = new Browser(env.base);
+    const pending = login.request('/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'bob', password: PASSWORD }),
+    });
+    // 登录已经读出用户、正在校验旧密码时，密码被改掉（改密码会让纪元加一）
+    await new Promise((r) => setTimeout(r, 10));
+    await env.db.update(users).set({ passwordHash: newHash, sessionEpoch: sql`${users.sessionEpoch} + 1` }).where(eq(users.id, bob!.id));
+    const res = await pending;
+    assert.equal(res.status, 401);
+    assert.equal((await login.request('/api/v1/accounts')).status, 401);
+    // 恢复原密码，纪元再加一保持「纪元相同 = 密码哈希相同」
+    await env.db.update(users).set({ passwordHash: bob!.passwordHash, sessionEpoch: sql`${users.sessionEpoch} + 1` }).where(eq(users.id, bob!.id));
+  });
+
+  test('退出登录不带 x-damail 头会被拒绝，会话不受影响', async () => {
+    const web = await sessionBrowser('bob');
+    const res = await web.request('/api/auth/logout', { method: 'POST', headers: { origin: env.base } });
+    assert.equal(res.status, 403);
+    assert.equal((await web.request('/api/v1/accounts')).status, 200);
+  });
+});
+
 // 会清空用户表，放在最后
 describe('首次初始化', () => {
   test('并发初始化只会创建一个管理员', async () => {

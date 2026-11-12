@@ -6,7 +6,7 @@
  * 只在本进程内生效。
  */
 import { L } from '../i18n/index.js';
-import { RetryableError } from './jobs.js';
+import { DeferredError, RetryableError } from './jobs.js';
 
 /** 被限流（HTTP 429）：retryAfterMs 是服务商要求等待的时间（如果给了） */
 export class RateLimitError extends RetryableError {
@@ -69,8 +69,8 @@ export const DEFAULT_AI_CONCURRENCY = 10;
 // 每个渠道最多排队这么多请求，再多直接拒绝，避免等待中的请求占满内存
 const MAX_WAITERS = 200;
 
-// 可重试：后台任务稍后再试；网页助手直接把原因显示给用户
-export class AiQueueFullError extends RetryableError {}
+// 后台任务推迟后再试（不消耗重试次数）；网页助手直接把原因显示给用户
+export class AiQueueFullError extends DeferredError {}
 
 /** 占一个请求名额，返回释放函数；渠道暂停中会一直等到暂停结束 */
 export async function acquireAiSlot(c: Channel, signal?: AbortSignal): Promise<() => void> {

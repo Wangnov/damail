@@ -131,3 +131,33 @@ describe('限流', () => {
     assert.ok(ms > 3000 && ms <= 5000, String(ms));
   });
 });
+
+describe('任务推迟', () => {
+  test('AI 排队已满推迟任务，不消耗重试次数', async () => {
+    const jobsMod = await import('../src/services/jobs.js');
+    const { eq } = await import('drizzle-orm');
+    let calls = 0;
+    jobsMod.registerJob(
+      'test_defer',
+      async () => {
+        calls++;
+        throw new limit.AiQueueFullError('queue full');
+      },
+      1,
+    );
+    await jobsMod.enqueue('test_defer', {});
+    await jobsMod.startJobs();
+    try {
+      for (let i = 0; i < 100 && calls === 0; i++) await sleep(50);
+      await sleep(100);
+      const job = await env.db.query.jobs.findFirst({ where: (j, { eq }) => eq(j.type, 'test_defer') });
+      assert.equal(calls, 1);
+      assert.equal(job!.status, 'queued', '推迟后重新排队，不判失败');
+      assert.equal(job!.attempts, 0, '不消耗重试次数');
+      assert.ok(job!.runAt.getTime() > Date.now() + 20_000, '推迟一段时间再跑');
+      await env.db.delete(env.schema.jobs).where(eq(env.schema.jobs.id, job!.id));
+    } finally {
+      jobsMod.stopJobs();
+    }
+  });
+});

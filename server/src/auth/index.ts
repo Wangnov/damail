@@ -59,12 +59,14 @@ async function currentVersion(userId: number) {
 }
 
 /**
- * 签发会话。签名用的密码和纪元在这里重新从数据库读取，不用调用方手里的用户数据：
+ * 签发会话，传入调用方刚校验过的密码哈希。纪元在这里重新从数据库读取：
  * 校验密码期间可能已经退出登录（纪元加一），用旧数据签发会让撤销失效。
+ * 密码哈希必须仍是校验过的那个：校验期间密码被改了，就不能用没校验过的新密码签发，返回 false。
  */
-export async function issueSession(c: Context, userId: number) {
+export async function issueSession(c: Context, verified: { id: number; passwordHash: string }): Promise<boolean> {
+  const userId = verified.id;
   const user = await loadSessionState(userId);
-  if (!user) throw new Error(`user ${userId} not found`);
+  if (!user || user.passwordHash !== verified.passwordHash) return false;
   remember(userId, user);
   const token = signSession({ uid: userId, exp: Math.floor(Date.now() / 1000) + SESSION_TTL, pv: sessionVersion(user) } satisfies SessionPayload);
   setCookie(c, COOKIE, token, {
@@ -74,6 +76,7 @@ export async function issueSession(c: Context, userId: number) {
     path: '/',
     maxAge: SESSION_TTL,
   });
+  return true;
 }
 
 export function clearSession(c: Context) {
