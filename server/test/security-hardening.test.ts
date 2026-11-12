@@ -93,6 +93,60 @@ describe('审批时保存全部发送字段', () => {
   });
 });
 
+describe('转发草稿的附件', () => {
+  const apiPost = (body: unknown) =>
+    fetch(`${env.base}/api/v1/drafts`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${env.apiKey.value}` },
+      body: JSON.stringify(body),
+    });
+
+  test('附件和草稿一起创建；复制附件失败时整个草稿回滚，不会留下空附件的草稿', async () => {
+    const { ingestMessage } = await import('../src/services/ingest.js');
+    const { config } = await import('../src/config.js');
+    const { existsSync } = await import('node:fs');
+    const path = await import('node:path');
+    const folder = await env.db.query.folders.findFirst({ where: (f, { eq }) => eq(f.accountId, env.accounts.work.id) });
+    const source = Buffer.from(
+      [
+        'From: a@example.com',
+        'Subject: with attachment',
+        'Message-ID: <fwd@example.com>',
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/mixed; boundary="b"',
+        '',
+        '--b',
+        'Content-Type: text/plain',
+        '',
+        'body',
+        '--b',
+        'Content-Type: application/pdf; name="report.pdf"',
+        'Content-Disposition: attachment; filename="report.pdf"',
+        '',
+        'pdf',
+        '--b--',
+        '',
+      ].join('\r\n'),
+    );
+    const msg = await ingestMessage({ accountId: env.accounts.work.id, folderId: folder!.id, uid: 800, source, flags: new Set() });
+    const ok = await apiPost({ mode: 'forward', sourceMessageId: msg.id, to: ['friend@example.com'] });
+    assert.equal(ok.status, 201);
+    const draft = (await ok.json()) as { attachments: { filename: string }[]; revision: number };
+    assert.deepEqual(draft.attachments.map((a) => a.filename), ['report.pdf']);
+
+    // 原始邮件文件丢失：复制附件失败，不能留下没有附件却可以提交的草稿
+    const before = await env.db.$count(env.schema.drafts);
+    const { eq, sql } = await import('drizzle-orm');
+    await env.db.update(env.schema.messages).set({ rawPath: 'missing/raw.eml' }).where(eq(env.schema.messages.id, msg.id));
+    const failed = await apiPost({ mode: 'forward', sourceMessageId: msg.id, to: ['friend@example.com'] });
+    assert.ok(failed.status >= 400);
+    assert.equal(await env.db.$count(env.schema.drafts), before);
+    // 序列不随事务回滚，last_value 就是被回滚的那次插入用掉的 id
+    const nextId = (await env.db.execute<{ last_value: string }>(sql`SELECT last_value FROM drafts_id_seq`)).rows[0]!.last_value;
+    assert.equal(existsSync(path.join(config.uploadDir, String(nextId))), false, '回滚后不留附件目录');
+  });
+});
+
 describe('请求体上限', () => {
   test('未登录接口的超大请求体在解析前返回 413', async () => {
     const big = JSON.stringify({ username: 'x', password: 'y'.repeat(3 * 1024 * 1024) });
@@ -122,6 +176,22 @@ describe('登录限流', () => {
   test('X-Forwarded-For 第一跳轮换不能绕过按 IP 限流', async () => {
     for (let i = 0; i < 10; i++) assert.equal((await attempt(`nobody-${i}`, { 'x-forwarded-for': `203.0.113.${i}, 198.51.100.7` })).status, 401);
     assert.equal((await attempt('nobody-x', { 'x-forwarded-for': '203.0.113.99, 198.51.100.7' })).status, 429);
+  });
+
+  test('修改账号时并发猜当前密码，也只能试到限额', async () => {
+    const web = await sessionBrowser();
+    const results = await Promise.all(
+      Array.from({ length: 15 }, () =>
+        web
+          .request('/api/auth/account', {
+            method: 'PUT',
+            headers: { 'content-type': 'application/json', origin: env.base, 'x-damail': '1', 'x-real-ip': '198.18.0.1' },
+            body: JSON.stringify({ currentPassword: 'wrong-password', username: 'alice' }),
+          })
+          .then((r) => r.status),
+      ),
+    );
+    assert.deepEqual([results.filter((s) => s === 400).length, results.filter((s) => s === 429).length], [10, 5], String(results));
   });
 
   test('同一账号换 IP 也会被限流，并发尝试同样计数', async () => {
@@ -184,6 +254,9 @@ describe('工具函数', () => {
     const { allowsPlaintext } = await import('../src/lib/transport-security.js');
     for (const h of ['localhost', '127.0.0.1', '127.1.2.3', '::1', '[::1]', 'mail.localhost']) assert.equal(allowsPlaintext(h), true, h);
     for (const h of ['smtp.example.com', '10.0.0.5', '192.168.1.2', 'localhost.example.com', '127.0.0.1.example.com']) assert.equal(allowsPlaintext(h), false, h);
+    // 经代理时 127.0.0.1 指的是代理那一端，链路也不可信
+    assert.equal(allowsPlaintext('127.0.0.1', 'socks5://proxy.example.com:1080'), false);
+    assert.equal(allowsPlaintext('localhost', null), true);
   });
 
   test('超过上限立即停止读取', async () => {
