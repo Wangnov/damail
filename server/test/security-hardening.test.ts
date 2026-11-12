@@ -238,6 +238,20 @@ describe('邮件里的 NUL 字符', () => {
   });
 });
 
+describe('Message-ID 带 NUL 的截断邮件', () => {
+  test('补取完整邮件时按入库时的规则比较 Message-ID', async () => {
+    const { ingestMessage, restoreMessageContent } = await import('../src/services/ingest.js');
+    const folder = await env.db.query.folders.findFirst({ where: (f, { eq }) => eq(f.accountId, env.accounts.work.id) });
+    const full = Buffer.from('From: a@example.com\r\nSubject: big\r\nMessage-ID: <big\u0000id@example.com>\r\n\r\nfull body\r\n');
+    const row = await ingestMessage({ accountId: env.accounts.work.id, folderId: folder!.id, uid: 950, source: full.subarray(0, full.length - 6), flags: new Set(), truncated: true, size: full.length });
+    const msg = await env.db.query.messages.findFirst({ where: (m, { eq }) => eq(m.id, row.id) });
+    assert.equal(msg!.truncated, true);
+    const restored = await restoreMessageContent(msg!, full);
+    assert.equal(restored.truncated, false);
+    assert.match(restored.textBody ?? '', /full body/);
+  });
+});
+
 describe('工具函数', () => {
   test('只有邮件数据本身的错误才算可以跳过的入库失败', async () => {
     const { isMessageDataError } = await import('../src/lib/db-errors.js');
@@ -250,13 +264,15 @@ describe('工具函数', () => {
     assert.equal(isMessageDataError(Object.assign(new Error('disk full'), { code: 'ENOSPC' })), false);
   });
 
-  test('只有本机地址允许不加密的 SMTP / IMAP', async () => {
+  test('只有直连回环 IP 允许不加密的 SMTP / IMAP', async () => {
     const { allowsPlaintext } = await import('../src/lib/transport-security.js');
-    for (const h of ['localhost', '127.0.0.1', '127.1.2.3', '::1', '[::1]', 'mail.localhost']) assert.equal(allowsPlaintext(h), true, h);
-    for (const h of ['smtp.example.com', '10.0.0.5', '192.168.1.2', 'localhost.example.com', '127.0.0.1.example.com']) assert.equal(allowsPlaintext(h), false, h);
+    for (const h of ['127.0.0.1', '127.1.2.3', '::1', '[::1]', '::ffff:127.0.0.1']) assert.equal(allowsPlaintext(h), true, h);
+    // 主机名由 DNS 解析，localhost 也可能被解析到远程地址
+    for (const h of ['localhost', 'mail.localhost', 'smtp.example.com', '10.0.0.5', '192.168.1.2', 'localhost.example.com', '127.0.0.1.example.com'])
+      assert.equal(allowsPlaintext(h), false, h);
     // 经代理时 127.0.0.1 指的是代理那一端，链路也不可信
     assert.equal(allowsPlaintext('127.0.0.1', 'socks5://proxy.example.com:1080'), false);
-    assert.equal(allowsPlaintext('localhost', null), true);
+    assert.equal(allowsPlaintext('127.0.0.1', null), true);
   });
 
   test('超过上限立即停止读取', async () => {
