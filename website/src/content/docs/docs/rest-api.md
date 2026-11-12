@@ -5,6 +5,8 @@ description: REST endpoints, the inbox rule format and webhooks
 
 Every endpoint accepts `Authorization: Bearer <API key>`, or a web session. Permissions match [MCP](/docs/mcp/#permissions); the required one is noted in parentheses.
 
+Message details, attachments and raw `.eml` downloads fetch and cache the complete original if background sync stored a truncated preview. The first read may take longer; later reads use the local cache. Failed downloads return an error and can be retried.
+
 ## Mail
 
 | Method | Path | Description |
@@ -52,6 +54,14 @@ Every endpoint accepts `Authorization: Bearer <API key>`, or a web session. Perm
 | POST | `/api/v1/rules/test` | Dry-run: returns matching mail without running actions (automation) |
 | POST | `/api/v1/rules/reorder` | `{ids}` set the order (automation) |
 | GET | `/api/v1/channels` | Notification channels without config (automation) |
+
+Ignore-list endpoints require `automation` permission and access to **all** mailboxes:
+
+- `GET /api/v1/ignored-senders`: list ignored senders
+- `POST /api/v1/ignored-senders`: add `{pattern}`, e.g. `{"pattern":"@example.com"}`
+- `DELETE /api/v1/ignored-senders/:pattern`: remove a pattern; URL-encode the address or domain
+
+Account-scoped keys cannot read or change this global list. Adding a pattern removes matching senders' existing AI analysis, matching MCP. Mailbox onboarding, credentials and other administrative settings remain managed through the web app.
 
 Rule format:
 

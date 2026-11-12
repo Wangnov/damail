@@ -161,7 +161,7 @@ export const config = {
   syncEnabled: env.SYNC_ENABLED !== 'false',
   // 默认轮询间隔（每个邮箱可以单独设置）：非 INBOX 文件夹按此轮询；INBOX 走 IDLE，同时按此间隔兜底
   pollIntervalMs: Number(env.POLL_INTERVAL_SEC ?? 300) * 1000,
-  // 超过此大小的邮件只抓取前 N 字节（够解析正文），附件不完整
+  // 后台同步超过此大小的邮件只抓取预览；读取详情或下载时按需补齐原件
   maxMessageBytes: Number(env.MAX_MESSAGE_MB ?? 30) * 1024 * 1024,
   // 点击发送后延迟 N 秒才真正发出，期间可以撤销
   sendDelaySec: Number(env.SEND_DELAY_SEC ?? 10),

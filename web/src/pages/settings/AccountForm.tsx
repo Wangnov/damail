@@ -142,6 +142,29 @@ export const useSyncDefaults = () =>
     staleTime: Infinity,
   });
 
+function HistoryRange({ value = 90, onChange }: { value?: number; onChange?: (days: number) => void }) {
+  const previousDays = useRef(90);
+  if (value > 0) previousDays.current = value;
+  return (
+    <Flex vertical gap={8}>
+      <Checkbox checked={value === 0} onChange={(e) => onChange?.(e.target.checked ? 0 : previousDays.current)}>
+        {t.accountForm.allHistory}
+      </Checkbox>
+      {value !== 0 && (
+        <InputNumber
+          value={value}
+          min={1}
+          max={36500}
+          prefix={t.accountForm.recent}
+          suffix={t.accountForm.daysOfMail}
+          onChange={(days) => onChange?.(days ?? 90)}
+          style={{ width: '100%' }}
+        />
+      )}
+    </Flex>
+  );
+}
+
 export function AccountForm({ open, account, onClose }: { open: boolean; account: Account | null; onClose: () => void }) {
   const { message } = App.useApp();
   const qc = useQueryClient();
@@ -469,7 +492,7 @@ export function AccountForm({ open, account, onClose }: { open: boolean; account
             </Form.Item>
             <div className="form-row">
               <Form.Item name="syncSinceDays" label={t.accountForm.firstSync} tooltip={tip(t.accountForm.firstSyncTip)}>
-                <InputNumber min={1} max={3650} prefix={t.accountForm.recent} suffix={t.accountForm.daysOfMail} style={{ width: '100%' }} />
+                <HistoryRange />
               </Form.Item>
               <Form.Item name="pollIntervalSec" label={t.accountForm.pollInterval} tooltip={tip(isGraph ? t.accountForm.pollTipGraph : t.accountForm.pollTip)}>
                 <Select

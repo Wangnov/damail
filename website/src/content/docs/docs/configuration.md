@@ -25,7 +25,7 @@ With the repository's `docker-compose.yml`, put these in the `.env` file next to
 | Variable | Default | Description |
 |---|---|---|
 | `POLL_INTERVAL_SEC` | `300` | Default polling interval in seconds, adjustable per mailbox. Inboxes use IDLE and poll as a fallback |
-| `MAX_MESSAGE_MB` | `30` | Messages larger than this only sync their first 2 MB |
+| `MAX_MESSAGE_MB` | `30` | Background preview threshold; larger messages sync 2 MB initially and are fetched in full and cached when read or downloaded |
 | `SEND_DELAY_SEC` | `10` | Delay after clicking send, during which you can undo |
 | `MAX_ATTACHMENT_MB` | `25` | Total attachment size limit when composing |
 | `ALLOW_PRIVATE_WEBHOOKS` | `false` | Allow notification channels to post to private network addresses (e.g. a self-hosted n8n) |

@@ -19,6 +19,8 @@ Add mailboxes under **Settings → Accounts**. Pick a provider and the IMAP / SM
 
 New mailboxes sync Inbox, Sent, Drafts, Junk and Trash by default; enable other folders under the mailbox’s **Folders**. The first sync backfills a number of days of history, newest first, and resumes if interrupted.
 
+Select **Sync all historical mail** in the mailbox's advanced settings to remove the date cutoff (`syncSinceDays: 0` in the admin API). Widening an existing mailbox's range backfills older mail while preserving existing messages, flags and analysis. Backfills do not trigger new-mail rules or notifications. Narrowing the range does not delete local mail.
+
 If your server cannot reach a provider directly (for example Gmail from mainland China), add an HTTP or SOCKS proxy under **Settings → Proxies** and select it in the mailbox settings. See [Proxies](/docs/proxies/).
 
 ## Outlook / Microsoft 365 (OAuth2)

@@ -54,6 +54,7 @@ export class AccountWorker {
     const client = this.client;
     this.client = null;
     if (client) await client.logout().catch(() => client.close());
+    await this.draining;
   }
 
   private status: StatusReporter;
@@ -210,8 +211,8 @@ export class AccountWorker {
       if (mb.exists > 0) {
         let uids: number[] = [];
         if (lastUid === 0) {
-          const since = new Date(Date.now() - this.syncDays * 86400_000);
-          uids = ((await client.search({ since }, { uid: true })) as number[] | false) || [];
+          const query = this.syncDays === 0 ? { all: true } : { since: new Date(Date.now() - this.syncDays * 86400_000) };
+          uids = ((await client.search(query, { uid: true })) as number[] | false) || [];
         } else {
           // 不能用 mb.uidNext 判断：邮箱保持选中时它不会随 EXISTS 更新
           uids = ((await client.search({ uid: `${lastUid + 1}:*` }, { uid: true })) as number[] | false) || [];

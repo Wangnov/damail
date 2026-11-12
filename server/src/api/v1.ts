@@ -42,6 +42,7 @@ import {
   type View,
 } from '../services/mail.js';
 import { L, pickLocale } from '../i18n/index.js';
+import { addIgnored, listIgnored, removeIgnored } from '../services/contacts.js';
 
 const batchAction = z.object({
   ids: z.array(z.number().int()).min(1).max(1000),
@@ -76,6 +77,30 @@ const THREAD_VIEWS = new Set<View>([...VIEWS, 'waiting']);
 
 const followUpInput = z.union([z.object({ dueAt: z.coerce.date() }), z.object({ done: z.literal(true) })]);
 
+const ignoreListRoutes = new Hono<AppEnv>()
+  .use(requireScope('automation'))
+  .use(async (c, next) => {
+    // 忽略名单对所有邮箱生效，与 MCP 自动化工具保持相同限制。
+    if (c.var.auth.scope.accountIds)
+      throw new ActionError(
+        L('忽略名单对所有邮箱生效，需要全部邮箱的访问权限', 'The ignore list affects all mailboxes and requires access to all accounts'),
+        403,
+      );
+    await next();
+  })
+  .get('/', async (c) => c.json(await listIgnored()))
+  .post('/', async (c) => {
+    const { pattern } = z.object({ pattern: z.string().max(320) }).parse(await body(c));
+    const res = await addIgnored(pattern);
+    audit(actorOf(c.var.auth), 'ignored_sender.add', { target: res.pattern, detail: { removedInsights: res.removedInsights } });
+    return c.json(res);
+  })
+  .delete('/:pattern', async (c) => {
+    const res = await removeIgnored(c.req.param('pattern'));
+    audit(actorOf(c.var.auth), 'ignored_sender.remove', { target: res.pattern });
+    return c.json(res);
+  });
+
 function num(v: string | undefined) {
   const n = Number(v);
   return v && Number.isFinite(n) ? n : undefined;
@@ -91,6 +116,7 @@ const INLINE_SAFE = /^(image\/(png|jpe?g|gif|webp|bmp)|application\/pdf|text\/pl
 
 export const v1Routes = new Hono<AppEnv>()
   .use(requireAuth('read'))
+  .route('/ignored-senders', ignoreListRoutes)
   .get('/accounts', async (c) => c.json(await listAccountsWithStats(c.var.auth.scope)))
   .get('/folders', async (c) => c.json(await listFolders(c.var.auth.scope, num(c.req.query('account')))))
   .get('/stats', async (c) => c.json(await getStats(c.var.auth.scope)))

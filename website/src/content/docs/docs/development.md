@@ -34,6 +34,14 @@ pnpm test        # server integration tests against a separate damail_test datab
 
 Tests only touch the local database — no real mailboxes, no internet, no sending.
 
+For a local IMAP end-to-end check, start the development containers and run:
+
+```bash
+pnpm --filter server exec tsx scripts/verify-mail-completeness.ts
+```
+
+This uses an isolated `damail_imap_test` database and GreenMail. It appends a 2010 message and a message larger than 30 MB, then checks history backfill, PDF and raw MIME checksums, unread flags and UIDVALIDITY protection. It never connects to a real mailbox or sends SMTP mail.
+
 ## Project layout
 
 ```txt
