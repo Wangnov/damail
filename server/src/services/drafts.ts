@@ -231,11 +231,24 @@ export async function createDraft(auth: AuthContext, input: DraftCreateInput, so
     if (list) values[key] = list;
   }
 
-  const [row] = await db.insert(drafts).values(values).returning();
-  let draft = row!;
-  if (msg && data.mode === 'forward') {
-    const attachments = await copyForwardAttachments(draft.id, msg);
-    if (attachments.length) [draft] = await db.update(drafts).set({ attachments }).where(eq(drafts.id, draft.id)).returning();
+  // 插入和复制转发附件放在同一个事务里：附件就位之前草稿对其他请求不可见，
+  // 不会出现 Agent 先提交、用户看到空附件批准、附件随后才写进待发邮件的情况
+  let createdId: number | undefined;
+  let draft: Draft;
+  try {
+    draft = await db.transaction(async (tx) => {
+      const [row] = await tx.insert(drafts).values(values).returning();
+      createdId = row!.id;
+      if (!msg || data.mode !== 'forward') return row!;
+      const attachments = await copyForwardAttachments(row!.id, msg);
+      if (!attachments.length) return row!;
+      const [withAttachments] = await tx.update(drafts).set({ attachments }).where(eq(drafts.id, row!.id)).returning();
+      return withAttachments!;
+    });
+  } catch (err) {
+    // 事务回滚后草稿不存在，已经复制出去的附件文件一并删掉
+    if (createdId !== undefined) await rm(path.join(config.uploadDir, String(createdId)), { recursive: true, force: true });
+    throw err;
   }
   audit(actorOf(auth), 'draft.create', { accountId: account.id, target: `draft:${draft.id}`, detail: { mode: data.mode, source } });
   publish(draft);

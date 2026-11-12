@@ -35,7 +35,7 @@ function createTransport(p: SmtpParams) {
     port: p.port,
     // 465 走隐式 TLS；587/25 必须 STARTTLS 成功才登录，服务器不支持（或被中间人去掉）就直接失败
     secure: p.secure,
-    requireTLS: !p.secure && !allowsPlaintext(p.host),
+    requireTLS: !p.secure && !allowsPlaintext(p.host, p.proxy),
     auth: p.accessToken ? { type: 'OAuth2', user: p.username, accessToken: p.accessToken } : { user: p.username, pass: p.password },
     connectionTimeout: 30_000,
     greetingTimeout: 20_000,
