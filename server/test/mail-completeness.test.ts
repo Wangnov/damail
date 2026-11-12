@@ -32,6 +32,29 @@ const patchHistory = (days: number) =>
     body: JSON.stringify({ syncSinceDays: days }),
   });
 
+test('PATCH: omitted fields preserve provider, history range and enabled state', async () => {
+  const { accounts } = env.schema;
+  await env.db.update(accounts).set({ provider: 'qq', syncSinceDays: 0, enabled: false }).where(eq(accounts.id, env.accounts.work.id));
+  const renamed = await browser.request(`/api/admin/accounts/${env.accounts.work.id}`, {
+    method: 'PATCH', headers: { 'content-type': 'application/json', 'x-damail': '1' },
+    body: JSON.stringify({ name: 'Renamed mailbox' }),
+  });
+  assert.equal(renamed.status, 200);
+  const updated = await renamed.json() as { provider: string; syncSinceDays: number; enabled: boolean };
+  assert.equal(updated.provider, 'qq');
+  assert.equal(updated.syncSinceDays, 0);
+  assert.equal(updated.enabled, false);
+  const enabled = await browser.request(`/api/admin/accounts/${env.accounts.work.id}`, {
+    method: 'PATCH', headers: { 'content-type': 'application/json', 'x-damail': '1' },
+    body: JSON.stringify({ enabled: true }),
+  });
+  assert.equal(enabled.status, 200);
+  const active = await enabled.json() as { provider: string; syncSinceDays: number; enabled: boolean };
+  assert.equal(active.provider, 'qq');
+  assert.equal(active.syncSinceDays, 0);
+  assert.equal(active.enabled, true);
+});
+
 test('history: allow all mail and mail older than ten years; reject negative days', async () => {
   for (const days of [0, 6000]) {
     const res = await patchHistory(days);

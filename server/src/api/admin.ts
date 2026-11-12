@@ -52,7 +52,13 @@ const accountInput = z.object({
 
 const API_SCOPES = ['read', 'organize', 'draft', 'send', 'automation'] as const;
 
-const accountUpdate = accountInput.partial().extend({ secret: z.string().optional() });
+const accountUpdate = accountInput.partial().extend({
+  // Zod 4 的 optional 字段仍会应用内层 default；PATCH 缺失字段必须保持原值。
+  provider: accountInput.shape.provider.unwrap().optional(),
+  syncSinceDays: accountInput.shape.syncSinceDays.unwrap().optional(),
+  enabled: accountInput.shape.enabled.unwrap().optional(),
+  secret: z.string().optional(),
+});
 
 function publicAccount(a: typeof accounts.$inferSelect) {
   const { secretEnc: _secret, ...rest } = a;
