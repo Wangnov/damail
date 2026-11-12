@@ -41,13 +41,28 @@ describe('并发上限', () => {
 
     peak = 0;
     await Promise.all(Array.from({ length: 6 }, () => call(channel(null))));
-    assert.equal(peak, 6, '不限制时全部同时进行');
+    assert.equal(peak, 6, '没设上限时，默认上限以内全部同时进行');
+
+    peak = 0;
+    await Promise.all(Array.from({ length: limit.DEFAULT_AI_CONCURRENCY + 5 }, () => call(channel(null))));
+    assert.equal(peak, limit.DEFAULT_AI_CONCURRENCY, '没设上限也不能无限并发');
 
     const other = { ...channel(1), channelId: 'c2' };
     const release = await limit.acquireAiSlot(other);
     const t0 = Date.now();
     await call(channel(1));
     assert.ok(Date.now() - t0 < 200, '别的渠道占满不影响这个渠道');
+    release();
+  });
+
+  test('排队已满时直接拒绝，错误可重试', async () => {
+    const { RetryableError } = await import('../src/services/jobs.js');
+    const release = await limit.acquireAiSlot(channel(1));
+    const ac = new AbortController();
+    const waiting = Array.from({ length: 200 }, () => limit.acquireAiSlot(channel(1), ac.signal).then((r) => r(), () => {}));
+    await assert.rejects(limit.acquireAiSlot(channel(1)), (err: unknown) => err instanceof limit.AiQueueFullError && err instanceof RetryableError);
+    ac.abort();
+    await Promise.all(waiting);
     release();
   });
 
@@ -114,5 +129,35 @@ describe('限流', () => {
     assert.equal(limit.parseRetryAfter('abc'), undefined);
     const ms = limit.parseRetryAfter(new Date(Date.now() + 5000).toUTCString())!;
     assert.ok(ms > 3000 && ms <= 5000, String(ms));
+  });
+});
+
+describe('任务推迟', () => {
+  test('AI 排队已满推迟任务，不消耗重试次数', async () => {
+    const jobsMod = await import('../src/services/jobs.js');
+    const { eq } = await import('drizzle-orm');
+    let calls = 0;
+    jobsMod.registerJob(
+      'test_defer',
+      async () => {
+        calls++;
+        throw new limit.AiQueueFullError('queue full');
+      },
+      1,
+    );
+    await jobsMod.enqueue('test_defer', {});
+    await jobsMod.startJobs();
+    try {
+      for (let i = 0; i < 100 && calls === 0; i++) await sleep(50);
+      await sleep(100);
+      const job = await env.db.query.jobs.findFirst({ where: (j, { eq }) => eq(j.type, 'test_defer') });
+      assert.equal(calls, 1);
+      assert.equal(job!.status, 'queued', '推迟后重新排队，不判失败');
+      assert.equal(job!.attempts, 0, '不消耗重试次数');
+      assert.ok(job!.runAt.getTime() > Date.now() + 20_000, '推迟一段时间再跑');
+      await env.db.delete(env.schema.jobs).where(eq(env.schema.jobs.id, job!.id));
+    } finally {
+      jobsMod.stopJobs();
+    }
   });
 });

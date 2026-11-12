@@ -19,7 +19,7 @@ Click **Add channel**:
 | API key | Stored encrypted in your database; only the first and last few characters are shown |
 | Models | Click **Sync upstream** to fetch the model list and tick the ones you want, or type model names |
 | Prices | USD per million tokens, used only for cost tracking. **Fill reference prices** fills in common models; set a **rate** if a reseller discounts official prices |
-| Concurrency | Maximum parallel requests on this channel, unlimited by default. Set 1–2 if you see frequent 429s |
+| Concurrency | Maximum parallel requests on this channel, 10 by default. Set 1–2 if you see frequent 429s |
 
 You can add several channels — for example a cheap DeepSeek channel for analysis and Claude for the assistant.
 
