@@ -14,12 +14,15 @@ import { Avatar, Button, Flex, Tag } from 'antd';
 import { Link } from 'react-router';
 import { SettingsPage } from '../../components/SettingsPage';
 import { useNewRelease } from '../../hooks/updates';
-import { intlLocale, t } from '../../i18n';
+import { t } from '../../i18n';
 import { APP_VERSION, AUTHOR, REPO_URL, githubRepo } from '../../lib/about';
 
 const FEATURE_ICONS = [<SyncOutlined key="sync" />, <RobotOutlined key="ai" />, <ApiOutlined key="api" />, <SafetyOutlined key="safe" />];
 
 const STACK = ['Hono', 'PostgreSQL', 'Drizzle ORM', 'React', 'Ant Design', 'TanStack Query', 'Tiptap', 'MCP'];
+
+/** Star 数：1000 以上写成 1.2k、12k（和官网一样） */
+const formatStars = (n: number) => (n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0).replace(/\.0$/, '')}k`);
 
 /** 仓库的 Star 数：只在填了 GitHub 仓库地址时查，查不到就只显示「Star」 */
 function useStars() {
@@ -68,11 +71,15 @@ export function AboutPage() {
             <p className="about-tagline">{t.about.tagline}</p>
             {REPO_URL && (
               <Flex gap={8} wrap style={{ marginTop: 12 }}>
-                <Button type="primary" icon={<StarFilled />} href={REPO_URL} target="_blank" rel="noopener noreferrer">
-                  {stars.data !== undefined ? t.about.starCount(stars.data.toLocaleString(intlLocale())) : t.about.star}
-                </Button>
-                <Button icon={<GithubOutlined />} href={REPO_URL} target="_blank" rel="noopener noreferrer">
-                  {t.about.source}
+                {/* 和官网首页一样：GitHub 后面跟 Star 数（查不到时不显示） */}
+                <Button className="about-github" icon={<GithubOutlined />} href={REPO_URL} target="_blank" rel="noopener noreferrer">
+                  GitHub
+                  {stars.data !== undefined && (
+                    <span className="about-star-count" title={t.about.stargazers(stars.data)}>
+                      <StarFilled />
+                      {formatStars(stars.data)}
+                    </span>
+                  )}
                 </Button>
                 <Button icon={<BugOutlined />} href={`${REPO_URL.replace(/\/$/, '')}/issues`} target="_blank" rel="noopener noreferrer">
                   {t.about.feedback}
