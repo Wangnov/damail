@@ -3,6 +3,7 @@ import { config, pollIntervalMsOf } from '../config.js';
 import { db } from '../db/index.js';
 import { accounts, folders, messages, type Account, type Folder } from '../db/schema.js';
 import { bus } from '../lib/events.js';
+import { readCapped } from '../lib/read-capped.js';
 import { ingestMessage } from '../services/ingest.js';
 import { onNewMessage } from '../services/pipeline.js';
 import { describeGraphError, graphBatch, graphFetch, graphJson, GraphError } from './graph.js';
@@ -244,19 +245,26 @@ export class GraphWorker {
         }
 
         const res = await graphFetch(account, `/me/messages/${item.id}/$value`, { timeoutMs: 300_000 });
-        const full = Buffer.from(await res.arrayBuffer());
-        const truncated = full.length > config.maxMessageBytes;
-        const row = await ingestMessage({
-          accountId: this.accountId,
-          folderId: folder.id,
-          uid: await nextUid(folder.id),
-          remoteId: item.id,
-          source: truncated ? full.subarray(0, TRUNCATED_BYTES) : full,
-          flags: graphFlags(item),
-          internalDate: item.receivedDateTime,
-          size: full.length,
-          truncated,
-        });
+        // 边下载边计数，超过上限立即中断：不能先把整封读进内存再判断大小
+        const { data, overflow: truncated, total } = await readCapped(res, config.maxMessageBytes);
+        // 单封入库失败只跳过这一封，不影响后面的邮件同步
+        let row: Awaited<ReturnType<typeof ingestMessage>>;
+        try {
+          row = await ingestMessage({
+            accountId: this.accountId,
+            folderId: folder.id,
+            uid: await nextUid(folder.id),
+            remoteId: item.id,
+            source: truncated ? data.subarray(0, TRUNCATED_BYTES) : data,
+            flags: graphFlags(item),
+            internalDate: item.receivedDateTime,
+            size: total,
+            truncated,
+          });
+        } catch (err) {
+          console.warn(`[graph:${this.accountId}] ${folder.path} ${item.id} 入库失败，已跳过：`, (err as Error).message);
+          continue;
+        }
         newInPage++;
         if (automate && row.inserted) await onNewMessage(row.id, row.date);
       }

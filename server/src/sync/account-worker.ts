@@ -288,17 +288,24 @@ export class AccountWorker {
 
       for (const { msg, truncated } of fetched) {
         if (!msg.source) continue;
-        const row = await ingestMessage({
-          accountId: this.accountId,
-          folderId: folder.id,
-          uid: msg.uid,
-          source: msg.source,
-          flags: msg.flags ?? new Set(),
-          internalDate: msg.internalDate,
-          size: msg.size,
-          truncated,
-          gmThreadId: client.capabilities.has('X-GM-EXT-1') ? msg.threadId : undefined,
-        });
+        // 单封入库失败只跳过这一封：否则同一封邮件每次同步都失败，后面的新邮件永远进不来
+        let row: Awaited<ReturnType<typeof ingestMessage>>;
+        try {
+          row = await ingestMessage({
+            accountId: this.accountId,
+            folderId: folder.id,
+            uid: msg.uid,
+            source: msg.source,
+            flags: msg.flags ?? new Set(),
+            internalDate: msg.internalDate,
+            size: msg.size,
+            truncated,
+            gmThreadId: client.capabilities.has('X-GM-EXT-1') ? msg.threadId : undefined,
+          });
+        } catch (err) {
+          console.warn(`[sync:${this.accountId}] ${folder.path} uid=${msg.uid} 入库失败，已跳过：`, (err as Error).message);
+          continue;
+        }
         if (automate && row.inserted) await onNewMessage(row.id, row.date);
       }
       bus.publish({ type: 'messages.new', accountId: this.accountId, folderId: folder.id, count: fetched.length });

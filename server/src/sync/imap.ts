@@ -1,5 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import { L } from '../i18n/index.js';
+import { allowsPlaintext } from '../lib/transport-security.js';
 
 export type ImapParams = {
   host: string;
@@ -18,6 +19,8 @@ export function createImapClient(p: ImapParams): ImapFlow {
     host: p.host,
     port: p.port,
     secure: p.secure,
+    // 非隐式 TLS 时强制 STARTTLS：服务器不支持（或被中间人去掉）就不登录，避免密码明文传输
+    ...(!p.secure && !allowsPlaintext(p.host) ? { doSTARTTLS: true } : {}),
     auth: p.accessToken ? { user: p.username, accessToken: p.accessToken } : { user: p.username, pass: p.password ?? '' },
     ...(p.proxy ? { proxy: p.proxy } : {}),
     // 网易系邮箱要求客户端发送 IMAP ID，否则会报 "Unsafe Login"

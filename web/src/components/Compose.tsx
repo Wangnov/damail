@@ -295,6 +295,8 @@ function ComposeDrawer({
   const touched = useRef(false);
   const timer = useRef<number | undefined>(undefined);
   const chain = useRef<Promise<void>>(Promise.resolve());
+  // 最近一次保存后服务器返回的草稿
+  const saved = useRef<Draft | null>(null);
   const save = useCallback(() => {
     window.clearTimeout(timer.current);
     // 上一次保存失败不能卡住后面的保存，否则改正错误后也一直报旧的错
@@ -303,7 +305,7 @@ function ComposeDrawer({
       dirty.current = false;
       setSaveState('saving');
       try {
-        await api(`/api/v1/drafts/${draftId}`, { method: 'PATCH', body: toBody(form.getFieldsValue()) });
+        saved.current = await api<Draft>(`/api/v1/drafts/${draftId}`, { method: 'PATCH', body: toBody(form.getFieldsValue()) });
         setSaveState('saved');
       } catch (e) {
         dirty.current = true;
@@ -367,7 +369,19 @@ function ComposeDrawer({
     try {
       dirty.current = true;
       await save();
-      const d = await api<Draft>(`/api/v1/drafts/${draftId}/send`, { method: 'POST', body: sendAt ? { sendAt: sendAt.toISOString() } : {} });
+      // 保存后的版本号随发送请求带上：保存之后草稿又被改过（比如 Agent 改了内容），服务器会拒绝发送
+      const latest = saved.current;
+      if (!latest) throw new Error(t.compose.draftChanged);
+      // 附件不在表单里，保存不会覆盖：和界面上显示的不一致就说明审阅期间被改过
+      const shown = qc.getQueryData<Draft>(['draft', draftId])?.attachments ?? [];
+      if (latest.attachments.map((a) => a.path).join('\n') !== shown.map((a) => a.path).join('\n')) {
+        qc.setQueryData<Draft>(['draft', draftId], (old) => (old ? { ...old, attachments: latest.attachments } : old));
+        throw new Error(t.compose.draftChanged);
+      }
+      const d = await api<Draft>(`/api/v1/drafts/${draftId}/send`, {
+        method: 'POST',
+        body: { revision: latest.revision, ...(sendAt ? { sendAt: sendAt.toISOString() } : {}) },
+      });
       onSent({ ...d, sendDelaySec: draft?.sendDelaySec }, !!sendAt);
       touched.current = true;
       setScheduleOpen(false);

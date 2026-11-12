@@ -11,6 +11,7 @@ import { messages, type Address, type AttachmentMeta, type Message } from '../db
 import { sha256 } from '../lib/crypto.js';
 import { withBodyUnsubscribe } from '../lib/body-unsubscribe.js';
 import { parseListHeaders } from '../lib/list-headers.js';
+import { stripNul } from '../lib/strip-nul.js';
 import { ActionError } from './actions.js';
 import { L } from '../i18n/index.js';
 
@@ -108,7 +109,7 @@ export async function restoreMessageContent(message: Message, source: Buffer): P
   ].filter(Boolean).join('\n').slice(0, 30000);
   const [updated] = await db
     .update(messages)
-    .set({
+    .set(stripNul({
       textBody: text,
       htmlBody: html,
       snippet: collapse(text ?? '').slice(0, 200),
@@ -119,7 +120,7 @@ export async function restoreMessageContent(message: Message, source: Buffer): P
       size: source.length,
       truncated: false,
       listInfo: withBodyUnsubscribe(parseListHeaders(source), { subject: message.subject, inReplyTo: message.inReplyTo, htmlBody: html, textBody: text }),
-    })
+    }))
     .where(and(eq(messages.id, message.id), eq(messages.folderId, message.folderId), eq(messages.uid, message.uid)))
     .returning();
   if (!updated) throw new ActionError(L('邮件已移动或删除，请刷新后重试', 'The message was moved or deleted; refresh and retry'), 404);
@@ -175,9 +176,10 @@ export async function ingestMessage(input: IncomingMessage): Promise<{ id: numbe
   const cc = flattenAddresses(parsed?.cc);
   const replyTo = flattenAddresses(parsed?.replyTo);
   const subject = parsed?.subject ?? (parsed ? '' : '(无法解析的邮件)');
-  const messageId = parsed?.messageId ?? null;
-  const inReplyTo = parsed?.inReplyTo ?? null;
-  const refs = normalizeRefs(parsed?.references);
+  // 这几个字段在归并会话时就会作为查询参数，先去掉 NUL；其余字段在入库前统一处理
+  const messageId = stripNul(parsed?.messageId ?? null);
+  const inReplyTo = stripNul(parsed?.inReplyTo ?? null);
+  const refs = stripNul(normalizeRefs(parsed?.references));
   if (inReplyTo && !refs.includes(inReplyTo)) refs.push(inReplyTo);
 
   const date = parsed?.date ?? (input.internalDate ? new Date(input.internalDate) : new Date());
@@ -229,7 +231,7 @@ export async function ingestMessage(input: IncomingMessage): Promise<{ id: numbe
     };
     const [row] = await tx
       .insert(messages)
-      .values(values)
+      .values(stripNul(values))
       .onConflictDoUpdate({
         target: [messages.folderId, messages.uid],
         set: { flags: values.flags, seen: values.seen, flagged: values.flagged, answered: values.answered },

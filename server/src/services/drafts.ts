@@ -51,6 +51,10 @@ export type DraftCreateInput = z.input<typeof draftCreate>;
 export type DraftPatch = z.infer<typeof draftFields>;
 
 const EDITABLE = new Set(['draft', 'pending', 'failed', 'rejected']);
+const EDITABLE_STATUSES = [...EDITABLE];
+/** 内容修改后版本号加一：网页批准时按版本号确认审的就是要发的那份 */
+const bumpRevision = () => sql`${drafts.revision} + 1`;
+const draftChanged = () => new ActionError(L('草稿内容已被修改，请检查最新内容后再操作', 'The draft was changed; review the latest version and try again'), 409);
 const email = z.email();
 
 function normalizeAddresses(input: z.infer<typeof addressList> | undefined): Address[] | undefined {
@@ -371,9 +375,15 @@ export async function updateDraft(auth: AuthContext, id: number, patch: DraftPat
   }
   // 失败或被拒绝的草稿修改后回到草稿状态，需要重新提交
   if (d.status === 'failed' || d.status === 'rejected') Object.assign(set, { status: 'draft', error: null });
-  const [row] = await db.update(drafts).set(set).where(eq(drafts.id, id)).returning();
-  publish(row!);
-  return row!;
+  // 状态要和读到的一致：避免检查之后草稿已被批准入队，修改却仍然写进待发送的邮件
+  const [row] = await db
+    .update(drafts)
+    .set({ ...set, revision: bumpRevision() })
+    .where(and(eq(drafts.id, id), eq(drafts.status, d.status)))
+    .returning();
+  if (!row) throw draftChanged();
+  publish(row);
+  return row;
 }
 
 export async function addAttachment(auth: AuthContext, id: number, file: { name: string; type: string; content: Buffer }) {
@@ -391,10 +401,15 @@ export async function addAttachment(auth: AuthContext, id: number, file: { name:
   // 用 SQL 原子追加，同时上传多个文件时不会互相覆盖
   const [row] = await db
     .update(drafts)
-    .set({ attachments: sql`${drafts.attachments} || ${JSON.stringify([att])}::jsonb`, updatedAt: new Date() })
-    .where(eq(drafts.id, id))
+    .set({ attachments: sql`${drafts.attachments} || ${JSON.stringify([att])}::jsonb`, revision: bumpRevision(), updatedAt: new Date() })
+    .where(and(eq(drafts.id, id), inArray(drafts.status, EDITABLE_STATUSES)))
     .returning();
-  return row!;
+  if (!row) {
+    await rm(path.join(config.uploadDir, att.path), { force: true });
+    throw new ActionError(L('当前状态不能修改附件', 'Attachments cannot be changed in the current state'), 409);
+  }
+  publish(row);
+  return row;
 }
 
 export async function removeAttachment(auth: AuthContext, id: number, index: number) {
@@ -402,13 +417,15 @@ export async function removeAttachment(auth: AuthContext, id: number, index: num
   if (!EDITABLE.has(d.status)) throw new ActionError(L('当前状态不能修改附件', 'Attachments cannot be changed in the current state'), 409);
   const att = d.attachments[index];
   if (!att) throw new ActionError(L('附件不存在', 'Attachment not found'), 404);
-  await rm(path.join(config.uploadDir, att.path), { force: true });
   const [row] = await db
     .update(drafts)
-    .set({ attachments: d.attachments.filter((_, i) => i !== index), updatedAt: new Date() })
-    .where(eq(drafts.id, id))
+    .set({ attachments: d.attachments.filter((_, i) => i !== index), revision: bumpRevision(), updatedAt: new Date() })
+    .where(and(eq(drafts.id, id), eq(drafts.status, d.status), eq(drafts.revision, d.revision)))
     .returning();
-  return row!;
+  if (!row) throw draftChanged();
+  await rm(path.join(config.uploadDir, att.path), { force: true });
+  publish(row);
+  return row;
 }
 
 export async function deleteDraft(auth: AuthContext, id: number) {
@@ -436,8 +453,9 @@ export async function submitDraft(auth: AuthContext, id: number, note?: string) 
   const [row] = await db
     .update(drafts)
     .set({ status: 'pending', error: null, note: note ?? d.note, updatedAt: new Date() })
-    .where(eq(drafts.id, id))
+    .where(and(eq(drafts.id, id), eq(drafts.status, d.status)))
     .returning();
+  if (!row) throw draftChanged();
   audit(actorOf(auth), 'draft.submit', { accountId: d.accountId, target: `draft:${id}` });
   publish(row!);
   emitDraftEvent('draft.pending', row!);
@@ -445,12 +463,16 @@ export async function submitDraft(auth: AuthContext, id: number, note?: string) 
 }
 
 /** 放入发送队列，sendAt 之前可以撤销；网页审批 pending 草稿也走这里 */
-export async function queueDraft(auth: AuthContext, id: number, opts: { delaySec?: number; sendAt?: Date } = {}) {
+export async function queueDraft(auth: AuthContext, id: number, opts: { delaySec?: number; sendAt?: Date; revision?: number } = {}) {
   const d = await loadOwned(auth, id);
   if (!EDITABLE.has(d.status)) throw new ActionError(L(`当前状态（${d.status}）不能发送`, `Cannot send in the current state (${d.status})`), 409);
   // OAuth 客户端不能直接发出待审批的邮件：审批只能由用户在网页上完成
   if (auth.kind === 'oauth' && d.status === 'pending')
     throw new ActionError(L('待审批的邮件只能由用户在网页上批准', 'Mail awaiting approval can only be approved by the user on the web'), 403);
+  // 网页批准必须带上用户审阅的版本号，审阅期间 Agent 改过内容就拒绝，不能发出用户没看过的内容
+  if (auth.kind === 'session' && d.status === 'pending' && opts.revision === undefined)
+    throw new ActionError(L('批准时缺少草稿版本，请刷新后重试', 'Missing draft version for approval; refresh and try again'), 400);
+  if (opts.revision !== undefined && opts.revision !== d.revision) throw draftChanged();
   await checkSendable(d);
   await assertOAuthSendQuota(auth);
   if (opts.sendAt && opts.sendAt.getTime() > Date.now() + 366 * 86_400_000)
@@ -460,13 +482,13 @@ export async function queueDraft(auth: AuthContext, id: number, opts: { delaySec
   const [row] = await db
     .update(drafts)
     .set({ status: 'queued', sendAt, error: null, attempts: 0, updatedAt: new Date() })
-    .where(and(eq(drafts.id, id), eq(drafts.status, d.status)))
+    .where(and(eq(drafts.id, id), eq(drafts.status, d.status), eq(drafts.revision, d.revision)))
     .returning();
   if (!row) throw new ActionError(L('草稿状态已变化，请刷新后重试', 'The draft has changed; refresh and try again'), 409);
   audit(actorOf(auth), d.status === 'pending' ? 'draft.approve' : 'draft.send', {
     accountId: d.accountId,
     target: `draft:${id}`,
-    detail: { to: d.to.map((a) => a.address), subject: d.subject },
+    detail: { to: d.to.map((a) => a.address), subject: d.subject, revision: d.revision },
   });
   publish(row);
   return row;
@@ -491,8 +513,9 @@ export async function rejectDraft(auth: AuthContext, id: number, reason?: string
   const [row] = await db
     .update(drafts)
     .set({ status: 'rejected', error: reason || L('已被用户拒绝', 'Rejected by the user'), updatedAt: new Date() })
-    .where(eq(drafts.id, id))
+    .where(and(eq(drafts.id, id), eq(drafts.status, 'pending')))
     .returning();
+  if (!row) throw draftChanged();
   audit(actorOf(auth), 'draft.reject', { accountId: d.accountId, target: `draft:${id}`, detail: { reason } });
   publish(row!);
   return row!;

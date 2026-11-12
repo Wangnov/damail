@@ -336,6 +336,8 @@ export type Draft = {
   sendAt: string | null;
   sentAt: string | null;
   followUpDays: number | null;
+  /** 内容版本号，批准待审批邮件时用来确认审的就是要发的那份 */
+  revision: number;
   updatedAt: string;
   sendDelaySec?: number;
 };

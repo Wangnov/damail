@@ -1,10 +1,10 @@
 import { eq, sql } from 'drizzle-orm';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import { clearSession, issueSession, readSession, requireSession, type AppEnv } from '../auth/index.js';
 import { db } from '../db/index.js';
 import { users } from '../db/schema.js';
-import { audit } from '../lib/audit.js';
+import { audit, requestIp } from '../lib/audit.js';
 import { hashPassword, verifyPassword } from '../lib/crypto.js';
 import { isLocale, normalizeLocale, rememberUserLocale, t, type Locale } from '../i18n/index.js';
 
@@ -44,10 +44,51 @@ const accountUpdate = z.object({
 
 const publicUser = (u: { id: number; username: string; locale: string }) => ({ id: u.id, username: u.username, locale: u.locale });
 
-// 简单的登录失败限流：每个 IP 每 10 分钟最多 10 次失败
+/**
+ * 密码尝试限流（单实例，内存计数）：
+ * - 按 IP 每 10 分钟 10 次失败；IP 取 X-Real-IP / X-Forwarded-For 最后一跳，客户端自己填的前几跳不算
+ * - 按账号每 10 分钟 30 次失败，换 IP 也绕不过
+ * - 校验密码前先计数，成功后再清掉，并发猜密码也会被计入
+ */
+const WINDOW_MS = 10 * 60_000;
+const LIMITS = { ip: 10, user: 30 };
+const MAX_KEYS = 10_000;
 const failures = new Map<string, { count: number; until: number }>();
-function clientIp(headers: Headers) {
-  return headers.get('x-forwarded-for')?.split(',')[0]?.trim() || headers.get('x-real-ip') || 'local';
+
+function attemptKeys(c: Context, account: string | number | undefined) {
+  const keys = [`ip:${requestIp(c)}`];
+  if (account !== undefined) keys.push(`user:${String(account).toLowerCase()}`);
+  return keys;
+}
+function limitOf(key: string) {
+  return key.startsWith('ip:') ? LIMITS.ip : LIMITS.user;
+}
+function attemptsBlocked(keys: string[]) {
+  const now = Date.now();
+  return keys.some((k) => {
+    const f = failures.get(k);
+    return Boolean(f && f.until > now && f.count >= limitOf(k));
+  });
+}
+/** 开始一次密码校验：先把计数加上（同步执行，没有并发空隙） */
+function beginAttempt(keys: string[]) {
+  const now = Date.now();
+  if (failures.size >= MAX_KEYS) {
+    for (const [k, v] of failures) if (v.until <= now) failures.delete(k);
+    // 清完还是太多（大量不同 IP / 账号在试），丢掉最早的条目，避免内存无限增长
+    for (const k of failures.keys()) {
+      if (failures.size < MAX_KEYS) break;
+      failures.delete(k);
+    }
+  }
+  for (const k of keys) {
+    const f = failures.get(k);
+    if (f && f.until > now) f.count += 1;
+    else failures.set(k, { count: 1, until: now + WINDOW_MS });
+  }
+}
+function attemptSucceeded(keys: string[]) {
+  for (const k of keys) failures.delete(k);
 }
 
 export const authRoutes = new Hono<AppEnv>()
@@ -76,42 +117,36 @@ export const authRoutes = new Hono<AppEnv>()
     return c.json(publicUser(created));
   })
   .post('/login', async (c) => {
-    const ip = clientIp(c.req.raw.headers);
-    const f = failures.get(ip);
     const body = loginCredentials.safeParse(await c.req.json().catch(() => ({})));
     const attempted = body.success ? body.data.username.slice(0, 100) : undefined;
-    if (f && f.count >= 10 && f.until > Date.now()) {
+    const keys = attemptKeys(c, attempted);
+    if (attemptsBlocked(keys)) {
       audit('anonymous', 'auth.login_blocked', { detail: { username: attempted } });
       return c.json({ error: t().common.auth.tooManyAttempts }, 429);
     }
+    beginAttempt(keys);
     const user = body.success ? await db.query.users.findFirst({ where: eq(users.username, body.data.username) }) : null;
     if (!user || !body.success || !(await verifyPassword(body.data.password, user.passwordHash))) {
-      const next = f && f.until > Date.now() ? f.count + 1 : 1;
-      failures.set(ip, { count: next, until: Date.now() + 10 * 60_000 });
       audit('anonymous', 'auth.login_failed', { detail: { username: attempted } });
       return c.json({ error: t().common.auth.wrongCredentials }, 401);
     }
-    failures.delete(ip);
+    attemptSucceeded(keys);
     issueSession(c, user);
     audit(`user:${user.id}`, 'auth.login');
     return c.json(publicUser(user));
   })
   // 修改用户名 / 密码，都要验证当前密码；改密码后其他设备的登录失效，当前设备重新签发会话
   .put('/account', requireSession(), async (c) => {
-    const ip = clientIp(c.req.raw.headers);
-    const f = failures.get(ip);
-    if (f && f.count >= 10 && f.until > Date.now()) return c.json({ error: t().common.auth.tooManyAttempts }, 429);
+    const keys = attemptKeys(c, `id:${c.var.auth.userId}`);
+    if (attemptsBlocked(keys)) return c.json({ error: t().common.auth.tooManyAttempts }, 429);
     const body = accountUpdate.safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) return c.json({ error: body.error.issues[0]?.message }, 400);
     const { currentPassword, username, newPassword } = body.data;
     const user = await db.query.users.findFirst({ where: eq(users.id, c.var.auth.userId) });
     if (!user) return c.json({ error: 'unauthorized' }, 401);
-    if (!(await verifyPassword(currentPassword, user.passwordHash))) {
-      const next = f && f.until > Date.now() ? f.count + 1 : 1;
-      failures.set(ip, { count: next, until: Date.now() + 10 * 60_000 });
-      return c.json({ error: t().common.auth.wrongCurrentPassword }, 400);
-    }
-    failures.delete(ip);
+    beginAttempt(keys);
+    if (!(await verifyPassword(currentPassword, user.passwordHash))) return c.json({ error: t().common.auth.wrongCurrentPassword }, 400);
+    attemptSucceeded(keys);
     const renamed = username !== undefined && username !== user.username;
     if (!renamed && !newPassword) return c.json(publicUser(user));
     if (renamed) {

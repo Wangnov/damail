@@ -22,6 +22,7 @@ import { composeHtml, composeText, extractInlineImages } from './drafts.js';
 import { emitDraftEvent } from './notify.js';
 import { createFollowUpForSent } from './followups.js';
 import { L } from '../i18n/index.js';
+import { allowsPlaintext } from '../lib/transport-security.js';
 
 const TICK_MS = 2000;
 const MAX_ATTEMPTS = 3;
@@ -32,8 +33,9 @@ function createTransport(p: SmtpParams) {
   const transport = nodemailer.createTransport({
     host: p.host,
     port: p.port,
-    // 465 走隐式 TLS；587/25 由 nodemailer 自动 STARTTLS
+    // 465 走隐式 TLS；587/25 必须 STARTTLS 成功才登录，服务器不支持（或被中间人去掉）就直接失败
     secure: p.secure,
+    requireTLS: !p.secure && !allowsPlaintext(p.host),
     auth: p.accessToken ? { type: 'OAuth2', user: p.username, accessToken: p.accessToken } : { user: p.username, pass: p.password },
     connectionTimeout: 30_000,
     greetingTimeout: 20_000,
@@ -50,6 +52,11 @@ type SmtpError = Error & { code?: string; responseCode?: number; response?: stri
 export function describeSmtpError(err: unknown): string {
   const e = err as SmtpError;
   const text = `${e?.response ?? ''} ${e?.message ?? ''}`;
+  if (/STARTTLS/i.test(text))
+    return L(
+      'SMTP 服务器没有提供 STARTTLS 加密，为避免密码明文传输已停止连接：请改用 465 端口（SSL/TLS）或检查网络是否被劫持',
+      'The SMTP server did not offer STARTTLS, so the connection was stopped to avoid sending the password in plain text: use port 465 (SSL/TLS) or check the network for interception',
+    );
   if (e?.code === 'EAUTH' || /authentication|535|LOGIN/i.test(text))
     return L(
       'SMTP 认证失败：请确认已开启 SMTP 服务，并使用授权码 / 应用专用密码',
