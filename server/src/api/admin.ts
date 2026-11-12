@@ -170,7 +170,11 @@ export const adminRoutes = new Hono<AppEnv>()
     if (backfill) await syncEngine.stopAccount(id);
     const row = await db.transaction(async (tx) => {
       const [updated] = await tx.update(accounts).set(patch).where(eq(accounts.id, id)).returning();
-      if (backfill) await tx.update(folders).set({ lastUid: 0, highestModseq: null, deltaLink: null }).where(eq(folders.accountId, id));
+      // Graph 的 lastUid 是本地 UID 分配计数器（nextUid），归零会让新导入的历史邮件撞上已有 UID，只能清 delta 游标。
+      if (backfill) {
+        const reset = updated!.protocol === 'graph' ? { deltaLink: null } : { lastUid: 0, highestModseq: null, deltaLink: null };
+        await tx.update(folders).set(reset).where(eq(folders.accountId, id));
+      }
       return updated!;
     }).catch((err) => {
       if (backfill && existing.enabled) syncEngine.startAccount(id);

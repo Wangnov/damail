@@ -63,18 +63,24 @@ test('history: allow all mail and mail older than ten years; reject negative day
   assert.equal((await patchHistory(-1)).status, 400);
 });
 
-test('history: widening a window replays IMAP and Graph checkpoints without deleting local mail', async () => {
-  const { accounts, folders, messages } = env.schema;
-  await env.db.update(accounts).set({ syncSinceDays: 90 }).where(eq(accounts.id, env.accounts.work.id));
-  const folder = (await env.db.select().from(folders).where(eq(folders.accountId, env.accounts.work.id)))[0]!;
-  await env.db.update(folders).set({ lastUid: 250, highestModseq: 9n, deltaLink: 'old-delta' }).where(eq(folders.id, folder.id));
-  assert.equal((await patchHistory(365)).status, 200);
-  const updated = await env.db.query.folders.findFirst({ where: eq(folders.id, folder.id) });
-  assert.equal(updated!.lastUid, 0);
-  assert.equal(updated!.highestModseq, null);
-  assert.equal(updated!.deltaLink, null);
-  assert.ok(await env.db.query.messages.findFirst({ where: eq(messages.id, env.messages.work.id) }));
-});
+for (const protocol of ['imap', 'graph'] as const)
+  test(`history: widening a window replays ${protocol} checkpoints without deleting local mail`, async () => {
+    const { accounts, folders, messages } = env.schema;
+    await env.db.update(accounts).set({ syncSinceDays: 90, protocol }).where(eq(accounts.id, env.accounts.work.id));
+    try {
+      const folder = (await env.db.select().from(folders).where(eq(folders.accountId, env.accounts.work.id)))[0]!;
+      await env.db.update(folders).set({ lastUid: 250, highestModseq: 9n, deltaLink: 'old-delta' }).where(eq(folders.id, folder.id));
+      assert.equal((await patchHistory(365)).status, 200);
+      const updated = await env.db.query.folders.findFirst({ where: eq(folders.id, folder.id) });
+      // IMAP 从服务器 UID 重新搜索；Graph 的 lastUid 是本地 UID 计数器，必须保留，否则历史邮件会撞上已有 UID
+      assert.equal(updated!.lastUid, protocol === 'imap' ? 0 : 250);
+      if (protocol === 'imap') assert.equal(updated!.highestModseq, null);
+      assert.equal(updated!.deltaLink, null);
+      assert.ok(await env.db.query.messages.findFirst({ where: eq(messages.id, env.messages.work.id) }));
+    } finally {
+      await env.db.update(accounts).set({ protocol: 'imap' }).where(eq(accounts.id, env.accounts.work.id));
+    }
+  });
 
 test('history: narrowing a window keeps existing checkpoints', async () => {
   const { accounts, folders } = env.schema;
