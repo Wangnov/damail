@@ -41,31 +41,23 @@
 
 ## 快速开始
 
-需要一台装有 Docker 和 Docker Compose 的机器。
+需要一台装有 Docker 和 Docker Compose 的机器，然后运行：
 
 ```bash
-mkdir damail && cd damail
-curl -O https://raw.githubusercontent.com/gopkg-dev/damail/main/docker-compose.yml
-curl -o .env https://raw.githubusercontent.com/gopkg-dev/damail/main/.env.example
+curl -fsSL https://damail.app/install.sh | sh
 ```
 
-编辑 `.env`，至少设置以下几项：
+安装脚本会先让你选择语言（简体中文 / English），然后创建 `damail/` 目录，下载 `docker-compose.yml`，生成带随机 `MASTER_KEY` 和数据库密码的 `.env`，并启动 DaMail。完成后打开 <http://localhost:8787>，创建管理员账号并添加第一个邮箱。
 
-```ini
-MASTER_KEY=          # openssl rand -hex 32，务必备份，它用来加密邮箱凭证
-POSTGRES_PASSWORD=   # 任意强密码
-PUBLIC_URL=https://mail.example.com
-```
-
-启动：
+已经有域名时，把访问地址一起传进去：
 
 ```bash
-docker compose pull && docker compose up -d
+curl -fsSL https://damail.app/install.sh | DAMAIL_PUBLIC_URL=https://mail.example.com sh
 ```
 
-打开 <http://localhost:8787>，创建管理员账号并添加第一个邮箱。HTTPS、反向代理和备份见[快速开始](https://damail.app/docs/quick-start/)。
+**务必备份 `damail/.env`**，里面的 `MASTER_KEY` 用来加密邮箱凭证。以后升级只需再运行一次安装命令：`.env` 不会被改动，数据库迁移在启动时自动完成。
 
-以后升级只需再执行一次 `docker compose pull && docker compose up -d`，数据库迁移会在启动时自动完成。
+安装选项、用 Docker Compose 手动安装、HTTPS 和反向代理见[快速开始](https://damail.app/docs/quick-start/)。
 
 ## 接入 AI Agent
 

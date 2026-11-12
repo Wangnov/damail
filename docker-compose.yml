@@ -1,4 +1,5 @@
-# 生产部署：docker compose pull && docker compose up -d
+# 生产部署：一键安装 curl -fsSL https://damail.app/install.sh | sh
+# 或手动：准备好 .env（至少 MASTER_KEY）后 docker compose pull && docker compose up -d
 services:
   db:
     image: pgvector/pgvector:pg17
@@ -33,7 +34,8 @@ services:
       # 检查新版本（读 GitHub Release），内网部署设为 false
       UPDATE_CHECK: ${UPDATE_CHECK:-true}
     ports:
-      - "${BIND:-127.0.0.1}:8787:8787"
+      # 默认只监听本机（给反向代理用）；直接对外提供服务时在 .env 里写 DAMAIL_BIND=0.0.0.0
+      - "${DAMAIL_BIND:-127.0.0.1}:${DAMAIL_PORT:-8787}:8787"
     volumes:
       - app-data:/data
 

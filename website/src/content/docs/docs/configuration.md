@@ -15,7 +15,8 @@ DaMail 的大部分设置都在网页上完成（邮箱、模型、规则、通�
 | `POSTGRES_PASSWORD` | `damail` | Compose 里 PostgreSQL 的密码 |
 | `PUBLIC_URL` | `http://localhost:8787` | 对外访问地址，用于 OAuth 回调、MCP 地址等 |
 | `COOKIE_SECURE` | `false` | 通过 HTTPS 访问时设为 `true` |
-| `BIND` | `127.0.0.1` | Compose 映射端口时监听的地址 |
+| `DAMAIL_BIND` | `127.0.0.1` | Compose 映射端口时监听的地址；不经反向代理直接对外提供服务时设为 `0.0.0.0` |
+| `DAMAIL_PORT` | `8787` | Compose 映射到宿主机的端口 |
 | `DAMAIL_VERSION` | `latest` | 使用的镜像版本，例如 `v0.2.0` |
 | `DATABASE_URL` | — | 不用 Compose 自带的数据库时，指向自己的 PostgreSQL（需要 `pg_trgm` 扩展） |
 

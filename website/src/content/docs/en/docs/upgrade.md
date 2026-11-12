@@ -5,7 +5,13 @@ description: Upgrade to a new version, and the in-app update notice
 
 ## Upgrade
 
-In the folder with `docker-compose.yml`:
+If you installed with the script, run the install command again from the same folder. Your `.env` is left untouched:
+
+```bash
+curl -fsSL https://damail.app/install.sh | sh
+```
+
+Or run this in the folder with `docker-compose.yml`:
 
 ```bash
 docker compose pull && docker compose up -d

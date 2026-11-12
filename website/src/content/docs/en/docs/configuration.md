@@ -15,7 +15,8 @@ With the repository's `docker-compose.yml`, put these in the `.env` file next to
 | `POSTGRES_PASSWORD` | `damail` | Password for the bundled PostgreSQL |
 | `PUBLIC_URL` | `http://localhost:8787` | Public URL, used for OAuth callbacks and the MCP address |
 | `COOKIE_SECURE` | `false` | Set to `true` when served over HTTPS |
-| `BIND` | `127.0.0.1` | Address Compose binds the port to |
+| `DAMAIL_BIND` | `127.0.0.1` | Address Compose binds the port to. Set `0.0.0.0` to serve directly without a reverse proxy |
+| `DAMAIL_PORT` | `8787` | Host port Compose maps to |
 | `DAMAIL_VERSION` | `latest` | Image version, e.g. `v0.2.0` |
 | `DATABASE_URL` | — | Your own PostgreSQL instead of the bundled one (needs the `pg_trgm` extension) |
 

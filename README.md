@@ -41,31 +41,23 @@ AI agents get scoped, auditable access to it through MCP and a REST API.
 
 ## Quick start
 
-You need a machine with Docker and Docker Compose.
+You need a machine with Docker and Docker Compose. Then run:
 
 ```bash
-mkdir damail && cd damail
-curl -O https://raw.githubusercontent.com/gopkg-dev/damail/main/docker-compose.yml
-curl -o .env https://raw.githubusercontent.com/gopkg-dev/damail/main/.env.example
+curl -fsSL https://damail.app/install.sh | sh
 ```
 
-Edit `.env` and set at least these values:
+The installer asks which language to use (简体中文 or English). It then creates `damail/`, downloads `docker-compose.yml`, writes a `.env` with a random `MASTER_KEY` and database password, and starts DaMail. Open <http://localhost:8787> to create the admin account and add your first mailbox.
 
-```ini
-MASTER_KEY=          # openssl rand -hex 32. Back it up: it encrypts your mailbox credentials
-POSTGRES_PASSWORD=   # any strong password
-PUBLIC_URL=https://mail.example.com
-```
-
-Start the stack:
+If you already have a domain, pass it in:
 
 ```bash
-docker compose pull && docker compose up -d
+curl -fsSL https://damail.app/install.sh | DAMAIL_PUBLIC_URL=https://mail.example.com sh
 ```
 
-Open <http://localhost:8787>, create the admin account and add your first mailbox. The [quick start guide](https://damail.app/en/docs/quick-start/) covers HTTPS, reverse proxies and backups.
+**Back up `damail/.env`.** Its `MASTER_KEY` encrypts your mailbox credentials. To upgrade, run the install command again; your `.env` is left as is, and database migrations run on startup.
 
-To upgrade, run `docker compose pull && docker compose up -d` again. Database migrations run on startup.
+The [quick start guide](https://damail.app/en/docs/quick-start/) covers installer options, manual setup with Docker Compose, HTTPS and reverse proxies.
 
 ## Connect an AI agent
 

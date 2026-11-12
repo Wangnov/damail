@@ -5,7 +5,13 @@ description: 升级到新版本，以及网页上的新版本提示
 
 ## 升级
 
-在 `docker-compose.yml` 所在目录执行：
+用一键脚本安装的，在原来的目录再运行一次安装命令即可（`.env` 不会被改动）：
+
+```bash
+curl -fsSL https://damail.app/install.sh | sh
+```
+
+或者在 `docker-compose.yml` 所在目录执行：
 
 ```bash
 docker compose pull && docker compose up -d

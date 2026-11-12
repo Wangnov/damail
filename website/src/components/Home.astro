@@ -34,14 +34,15 @@ const PRIVACY_ICONS: IconName[] = ['lock', 'shield', 'cpu'];
 const VIEW_ICONS: IconName[] = ['inbox', 'sparkles', 'mail', 'star', 'clock'];
 const ACCOUNT_COLORS = ['#1677ff', '#16a34a', '#ea580c'];
 
-const INSTALL = 'docker compose pull && docker compose up -d';
+const INSTALL = 'curl -fsSL https://damail.app/install.sh | sh';
 const startCode = [
-  'curl -O https://raw.githubusercontent.com/gopkg-dev/damail/main/docker-compose.yml',
-  'curl -o .env https://raw.githubusercontent.com/gopkg-dev/damail/main/.env.example',
   t.start.comment[0],
-  'openssl rand -hex 32',
-  t.start.comment[1],
   INSTALL,
+  '',
+  t.start.comment[1],
+  'curl -fsSL https://damail.app/install.sh | DAMAIL_PUBLIC_URL=https://mail.example.com sh',
+  '',
+  t.start.comment[2],
 ];
 const claudeCmd = `claude mcp add --transport http damail \\
   https://mail.example.com/mcp \\
