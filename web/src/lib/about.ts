@@ -3,9 +3,9 @@
 /** 开源仓库地址，例如 https://github.com/xxx/damail；留空时不显示 Star、源码和反馈按钮 */
 export const REPO_URL: string = 'https://github.com/gopkg-dev/damail';
 
-/** 官网和文档（website/，部署在 GitHub Pages）；英文界面链到英文文档 */
+/** 官网和文档（website/，部署在 GitHub Pages）；默认英文，中文界面链到 /zh/ 下的中文文档 */
 export const SITE_URL = 'https://damail.app';
-export const docsUrl = (path: string, locale: string) => `${SITE_URL}/${locale === 'zh-CN' ? '' : 'en/'}docs/${path}`;
+export const docsUrl = (path: string, locale: string) => `${SITE_URL}/${locale === 'zh-CN' ? 'zh/' : ''}docs/${path}`;
 
 export const AUTHOR = {
   name: 'Karen',

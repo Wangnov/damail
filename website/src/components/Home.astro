@@ -1,6 +1,7 @@
 ---
 import logo from '../assets/logo.svg?raw';
 import { HOME } from '../i18n/home';
+import Brand from './Brand.astro';
 import Icon, { type IconName } from './Icon.astro';
 import '../styles/home.css';
 
@@ -9,53 +10,50 @@ interface Props {
 }
 const { locale } = Astro.props;
 const t = HOME[locale];
+const app = t.app;
+const asst = app.assistant;
+const f = t.features;
+const ag = t.agents;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
-const prefix = locale === 'en' ? `${base}en/` : base;
+const prefix = locale === 'zh' ? `${base}zh/` : base;
 const REPO = 'https://github.com/gopkg-dev/damail';
 const docs = (path = '') => `${prefix}docs/${path}`;
-const chat = t.assistant.chat;
-const subs = t.subs.mock;
-
-const FEATURE_ICONS: IconName[] = ['sync', 'sparkles', 'rule', 'bell', 'chart', 'search', 'pen', 'globe'];
-const ASSIST_ICONS: IconName[] = ['search', 'mail', 'reply', 'check', 'cpu'];
-const SUBS_ICONS: IconName[] = ['chart', 'shield', 'mail', 'bot'];
-const AGENT_ICONS: IconName[] = ['key', 'layers', 'check', 'shield'];
-// 首页「可以接入」列表：前四个是主动型 AI 助手，高亮显示
-const AGENT_CLIENTS: [string, boolean][] = [
-  ['Claude Duet', true],
-  ['ChatGPT dots', true],
-  ['Grok Bot', true],
-  ['Meta Muse', true],
-  ['Claude Code', false],
-  ['Cursor', false],
-  ['Claude Desktop', false],
-];
-const PRIVACY_ICONS: IconName[] = ['lock', 'shield', 'cpu'];
-const VIEW_ICONS: IconName[] = ['inbox', 'sparkles', 'mail', 'star', 'clock'];
-const ACCOUNT_COLORS = ['#1677ff', '#16a34a', '#ea580c'];
 
 const INSTALL = 'curl -fsSL https://damail.app/install.sh | sh';
-const startCode = [
-  t.start.comment[0],
-  INSTALL,
-  '',
-  t.start.comment[1],
-  'curl -fsSL https://damail.app/install.sh | DAMAIL_PUBLIC_URL=https://mail.example.com sh',
-  '',
-  t.start.comment[2],
+// 侧边栏图标顺序和真实界面一致：概览 邮件 草稿 订阅 通讯录 | 报告 统计 | 智能 审计 …… 助手 设置
+const RAIL_ICONS: IconName[] = ['home', 'inbox', 'file', 'mega', 'contacts', 'report', 'chart', 'cpu', 'shield', 'chat', 'gear'];
+const VIEW_ICONS: IconName[] = ['inbox', 'star', 'clock', 'mail', 'star', 'send', 'tag'];
+// 「AI Agent」区块里列出的客户端
+const AGENT_CLIENTS: [name: string, logo: string][] = [
+  ['Claude Duet', 'claude'],
+  ['ChatGPT dots', 'openai'],
+  ['Grok Bot', 'grok'],
+  ['Meta Muse', 'meta'],
+  ['Claude Code', 'claude'],
+  ['Cursor', 'cursor'],
 ];
-const claudeCmd = `claude mcp add --transport http damail \\
-  https://mail.example.com/mcp \\
-  --header "Authorization: Bearer dm_xxx"`;
-const jsonCfg = `{
-  "mcpServers": {
-    "damail": {
-      "type": "http",
-      "url": "https://mail.example.com/mcp",
-      "headers": { "Authorization": "Bearer dm_xxx" }
-    }
-  }
-}`;
+// 终端演示的输出行（和 install.sh 一致）。对齐靠空格，所以整行用字符串生成，避免模板压缩空白
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const STEP = (s: string): [string, string] => ['', `<em>==&gt;</em> ${esc(s)}`];
+const OK = (s: string): [string, string] => ['dim', ` <s>✔</s> ${s}`];
+const TERM: [cls: string, html: string][] = [
+  ['dim', 'Language / 语言'],
+  ['dim', '  1) 简体中文   2) English'],
+  ['', `Choose / 请选择 [${t.start.choice}]: <b>${t.start.choice}</b>`],
+  ...t.start.lines.map(STEP),
+  ['dim', '[+] Pulling 2/2'],
+  OK('db  Pulled'),
+  OK('app Pulled'),
+  STEP(t.start.starting),
+  ['dim', '[+] Running 3/3'],
+  OK('Network damail_default  Created'),
+  OK('Container damail-db-1   Healthy'),
+  OK('Container damail-app-1  Started'),
+  STEP(t.start.waiting),
+  ['', ' '],
+  ['ok', esc(t.start.ready)],
+  ...t.start.summary.map(([k, v, style]): [string, string] => (style === 'url' ? ['', `  ${esc(k)}<u>${esc(v)}</u>`] : ['dim', `  ${esc(k)}${esc(v)}`])),
+];
 const GITHUB_PATH =
   'M12 .5a11.5 11.5 0 0 0-3.6 22.4c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6A11.5 11.5 0 0 0 12 .5z';
 ---
@@ -71,8 +69,9 @@ const GITHUB_PATH =
     <meta property="og:description" content={t.description} />
     <meta property="og:type" content="website" />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
-    <link rel="alternate" hreflang="zh-CN" href={base} />
-    <link rel="alternate" hreflang="en" href={`${base}en/`} />
+    <link rel="alternate" hreflang="en" href={base} />
+    <link rel="alternate" hreflang="zh-CN" href={`${base}zh/`} />
+    <link rel="alternate" hreflang="x-default" href={base} />
     {/* 和文档页（Starlight）共用 localStorage 里的 starlight-theme：light / dark / 空 = 跟随系统 */}
     <script is:inline>
       (() => {
@@ -89,41 +88,36 @@ const GITHUB_PATH =
     <div class="bg" aria-hidden="true"></div>
 
     <header class="nav">
-      <div class="nav-inner">
-        <a class="brand" href={prefix}>
-          <span class="brand-logo" set:html={logo} />
-          <span>DaMail</span>
-        </a>
+      <div class="nav-in">
+        <a class="brand" href={prefix}><span class="logo" set:html={logo} /><span>DaMail</span></a>
         <nav class="nav-links">
           <a href="#features">{t.nav.features}</a>
-          <a href="#assistant">{t.nav.assistant}</a>
           <a href="#agents">{t.nav.agents}</a>
-          <a href="#subscriptions">{t.nav.subs}</a>
           <a href="#start">{t.nav.start}</a>
           <a href={docs()}>{t.nav.docs}</a>
         </nav>
-        <div class="nav-actions">
-          <a class="nav-btn lang" href={`${base}${t.nav.langHref}`} hreflang={locale === 'zh' ? 'en' : 'zh-CN'}>{t.nav.switchLang}</a>
-          <button class="nav-btn icon" type="button" id="theme-toggle" aria-label={t.nav.theme} title={t.nav.theme}>
-            <Icon name="sun" size={18} class="i-sun" />
+        <div class="nav-act">
+          <a class="nbtn" href={`${base}${t.nav.langHref}`} hreflang={t.nav.langCode}><Icon name="globe" size={16} /><span>{t.nav.switchLang}</span></a>
+          <i class="nav-sep" aria-hidden="true"></i>
+          <button class="nbtn sq" type="button" id="theme-toggle" aria-label={t.nav.theme} title={t.nav.theme}>
+            <Icon name="sun" size={19} class="i-sun" />
             <Icon name="moon" size={18} class="i-moon" />
           </button>
-          <a class="nav-btn gh" href={REPO} aria-label="GitHub" title="GitHub">
+          <a class="nbtn gh" href={REPO} aria-label="GitHub" title="GitHub">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={GITHUB_PATH}></path></svg>
-            <span class="gh-stars" data-stars hidden><Icon name="star" size={13} /><span data-stars-n></span></span>
+            <span class="btn-count" data-stars hidden><Icon name="star" size={12} /><span data-stars-n></span></span>
           </a>
         </div>
       </div>
     </header>
 
-    <main>
+    <main class="wrap">
       <section class="hero">
         <span class="pill">{t.hero.badge}</span>
         <h1>{t.hero.title[0]}<br /><span class="grad">{t.hero.title[1]}</span></h1>
         <p class="lead">{t.hero.lead}</p>
-        <p class="dame">{t.hero.dame}</p>
-        <div class="hero-actions">
-          <a class="btn primary" href={docs('quick-start/')}>{t.hero.primary}<Icon name="arrow" size={18} /></a>
+        <div class="hero-act">
+          <a class="btn primary" href="#start">{t.hero.primary}<Icon name="arrow" size={18} /></a>
           <a class="btn ghost" href={REPO}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={GITHUB_PATH}></path></svg>
             {t.hero.secondary}
@@ -131,438 +125,421 @@ const GITHUB_PATH =
           </a>
         </div>
         <div class="cmd">
-          <span class="cmd-prompt">$</span>
-          <code>{INSTALL}</code>
-          <button type="button" class="cmd-copy" data-copy={INSTALL} data-copied={t.hero.copied} aria-label={t.hero.copy} title={t.hero.copy}>
-            <Icon name="copy" size={16} />
-          </button>
+          <span>$</span><code>{INSTALL}</code>
+          <button type="button" data-copy={INSTALL} data-copied={t.hero.copied} aria-label={t.hero.copy} title={t.hero.copy}><Icon name="copy" size={16} class="i-copy" /><Icon name="check" size={16} class="i-done" /></button>
         </div>
 
-        {/* 产品界面示意：数据都是虚构的 */}
+        {/* 产品界面：照真实界面复刻，数据都是虚构的 */}
         <div class="shot" aria-hidden="true">
-          <div class="win">
-            <div class="win-bar">
-              <span></span><span></span><span></span>
-              <div class="win-url">mail.example.com</div>
-            </div>
-            <div class="app">
-              <div class="rail">
-                <span class="rail-logo" set:html={logo} />
-                <Icon name="inbox" size={18} class="on" />
-                <Icon name="pen" size={18} />
-                <Icon name="chart" size={18} />
-                <Icon name="sparkles" size={18} />
-                <Icon name="bot" size={18} />
-              </div>
-              <aside class="side">
-                {
-                  t.mock.views.map(([name, count], i) => (
-                    <div class={`side-item${i === 0 ? ' on' : ''}`}>
-                      <Icon name={VIEW_ICONS[i]!} size={15} />
+          <div class="app">
+            <div class="rail">
+              <span class="r-logo" set:html={logo} />
+              {
+                app.rail.slice(0, 9).map((name, i) => (
+                  <>
+                    {(i === 5 || i === 7) && <hr />}
+                    <span class:list={['r-item', { on: i === 1 }]}>
+                      <Icon name={RAIL_ICONS[i]!} size={17} />
                       <span>{name}</span>
-                      {count && <em>{count}</em>}
-                    </div>
-                  ))
-                }
-                <div class="side-title">{t.mock.accountsTitle}</div>
-                {
-                  t.mock.accounts.map((name, i) => (
-                    <div class="side-item">
-                      <i class="dot" style={`background:${ACCOUNT_COLORS[i]}`} />
-                      <span>{name}</span>
-                    </div>
-                  ))
-                }
-              </aside>
-              <div class="list">
-                <div class="search"><Icon name="search" size={14} />{t.mock.search}</div>
-                {
-                  t.mock.threads.map((m, i) => (
-                    <div class={`row${i === 0 ? ' on' : ''}${m.unread ? ' unread' : ''}`}>
-                      <div class="row-top">
-                        <b>{m.from}</b>
-                        <time>{m.time}</time>
-                      </div>
-                      <div class="row-subject">{m.subject}</div>
-                      <div class="row-bottom">
-                        <span class="row-snippet">{m.snippet}</span>
-                        <span class={`chip ${m.tone}`}>{m.tag}</span>
-                      </div>
-                    </div>
-                  ))
-                }
+                      {i === 2 && <i class="r-badge">2</i>}
+                    </span>
+                  </>
+                ))
+              }
+              <div class="r-bottom">
+                <span class="r-item on"><Icon name="chat" size={17} /><span>{app.rail[9]}</span></span>
+                <span class="r-item"><Icon name="gear" size={17} /><span>{app.rail[10]}</span></span>
+                <span class="r-av">{app.avatar}</span>
               </div>
-              <div class="reader">
-                <div class="reader-subject">{t.mock.readerSubject}</div>
-                <div class="reader-from">
-                  <span class="avatar">{t.mock.threads[0]!.from.slice(0, 1)}</span>
-                  {t.mock.readerFrom}
+            </div>
+            <div class="side">
+              <div class="side-h"><b>{app.mail}</b><Icon name="menu" size={15} /></div>
+              <div class="compose"><Icon name="pen" size={14} />{app.compose}</div>
+              {
+                app.views.map(([name, n, strong], i) => (
+                  <span class:list={['side-item', { on: i === 0 }]}>
+                    <Icon name={VIEW_ICONS[i]!} size={15} />
+                    <span>{name}</span>
+                    {n && <em class:list={{ blue: strong }}>{n}</em>}
+                  </span>
+                ))
+              }
+              <div class="side-sec">{app.accountsTitle}</div>
+              {
+                app.accounts.map(([logo, name, n, strong]) => (
+                  <span class="side-item">
+                    <Brand logo={logo} size={15} />
+                    <span>{name}</span>
+                    <em class:list={{ blue: strong }}>{n}</em>
+                  </span>
+                ))
+              }
+            </div>
+            <div class="main">
+              <div class="main-h">
+                <b>{app.inbox}</b>
+                <div class="search">
+                  <Icon name="search" size={14} /><span>{app.search}</span><em><Icon name="bulb" size={13} />{app.aiSearch}</em>
                 </div>
-                <div class="summary">
-                  <div class="summary-title"><Icon name="sparkles" size={14} />{t.mock.summaryTitle}</div>
-                  <p>{t.mock.summary}</p>
-                  <div class="summary-todo"><Icon name="check" size={13} />{t.mock.todo}</div>
+              </div>
+              <div class="main-b">
+                <div class="mlist">
+                  <div class="ml-h">
+                    <span class="cb"></span><span>{app.total}</span><span class="seg"><b>{app.all}</b><i>{app.unread}</i></span>
+                  </div>
+                  {
+                    app.threads.map((m) => (
+                      <div class:list={['mi', { unread: m.unread, on: m.on }]}>
+                        <span class="av" style={`--c:${m.color}`}>{m.av}</span>
+                        <div class="mi-c">
+                          <div class="mi-1"><b>{m.from}</b><time>{m.time}</time></div>
+                          <div class="mi-2">
+                            <span class="sj">{m.subject}</span>
+                            {m.tags.map(([name, tone]) => <em class={`tg ${tone}`}>{name}</em>)}
+                            <span class="acct" style={`--d:${app.accounts[m.account]![4]}`}>{app.accounts[m.account]![1]}</span>
+                          </div>
+                          <div class="mi-3">{m.snippet}</div>
+                        </div>
+                      </div>
+                    ))
+                  }
                 </div>
-                <div class="reader-body">{t.mock.body.map((p) => <p>{p}</p>)}</div>
-                <div class="reader-actions">
-                  <span><Icon name="reply" size={14} />{t.mock.reply}</span>
-                  <span>{t.mock.replyAll}</span>
-                  <span>{t.mock.forward}</span>
+                <div class="read">
+                  <div class="rd-h">
+                    <h4>{app.reader.subject}</h4>
+                    <span class="rd-act">
+                      <Icon name="archive" size={16} /><Icon name="trash" size={16} /><Icon name="tag" size={16} /><span class="gold"><Icon name="star" size={16} /></span>
+                    </span>
+                  </div>
+                  <div class="rd-from">
+                    <span class="av" style="--c:#3b6cf6">{app.reader.av}</span>
+                    <div>
+                      <b>{app.reader.from}</b> <span>{app.reader.address}</span>
+                      <div class="rd-to">{app.reader.to}</div>
+                    </div>
+                    <time>{app.reader.date}</time>
+                  </div>
+                  <span class="add-tag"><Icon name="plus" size={12} />{app.reader.addTag}</span>
+                  <div class="ai">
+                    <div class="ai-h">
+                      <span class="ai-t"><Icon name="sparkles" size={14} />{app.reader.aiTitle}</span>
+                      {app.reader.tags.map(([name, tone]) => <em class={`tg ${tone}`}>{name}</em>)}
+                    </div>
+                    <p>{app.reader.summary}</p>
+                    <dl>{app.reader.fields.map(([k, v]) => <><dt>{k}</dt><dd>{v}</dd></>)}</dl>
+                  </div>
+                  <div class="rd-body">{app.reader.body}</div>
+                  <div class="rd-btns">
+                    <span><Icon name="reply" size={14} />{app.reader.reply}</span>
+                    <span><Icon name="forward" size={14} />{app.reader.forward}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="float agent">
-            <div class="float-title"><Icon name="terminal" size={14} />{t.mock.agentTitle}</div>
-            <code><span class="fn">{t.mock.agentCall}</span>(<span class="str">"{t.mock.agentArgs}"</span>)</code>
-            <div class="float-ok"><Icon name="check" size={13} />{t.mock.agentResult}</div>
-          </div>
-          <div class="float draft">
-            <div class="float-title"><Icon name="pen" size={14} />{t.mock.draftTitle}</div>
-            <span class="chip orange">{t.mock.draftState}</span>
-          </div>
-        </div>
-      </section>
 
-      <section class="providers">
-        <p>{t.providersTitle}</p>
-        <div class="provider-list">{t.providers.map((p) => <span>{p}</span>)}</div>
-      </section>
-
-      <section class="section split assistant" id="assistant">
-        {/* 站内助手示意：数据都是虚构的 */}
-        <div class="assist-shot" aria-hidden="true">
-          <div class="assist">
-            <div class="assist-head">
-              <span class="assist-logo"><Icon name="sparkles" size={15} /></span>
-              <b>{chat.title}</b>
-              <span class="assist-model">{chat.model}</span>
-            </div>
-            <div class="assist-body">
-              <div class="assist-q"><p>{chat.question}</p></div>
-              <div class="assist-a">
-                <span class="assist-avatar"><Icon name="sparkles" size={14} /></span>
-                <div class="assist-msg">
-                  <div class="assist-thought"><Icon name="clock" size={13} />{chat.thought}</div>
-                  <ul class="assist-steps">
+            {/* 右下角的 AI 助手：循环演示输入问题、调用工具、流式回答 */}
+            <div class="asst" data-asst data-q={asst.question} data-a={asst.answer} data-thinking={asst.thinking} data-thought={asst.thought}>
+              <div class="as-h">
+                <span class="as-ico"><Icon name="botcard" size={16} /></span><b>{asst.title}</b><Icon name="chev" size={13} />
+                <span class="as-act"><Icon name="plus" size={14} /><Icon name="expand" size={13} /><Icon name="close" size={14} /></span>
+              </div>
+              <div class="as-b">
+                <div class="as-welcome">
+                  <span class="as-big"><Icon name="botcard" size={20} /></span>
+                  <h5>{asst.hello}</h5>
+                  <p>{asst.intro}</p>
+                  <div class="as-grid">
                     {
-                      chat.steps.map(([fn, args, result]) => (
-                        <li>
-                          <Icon name="check" size={13} class="ok" />
-                          <code>
-                            <span class="fn">{fn}</span>
-                            <span class="args">{args}</span>
-                          </code>
-                          <span class="flow-result">{result}</span>
-                        </li>
+                      asst.cards.map(([icon, title, desc]) => (
+                        <div>
+                          <span><Icon name={icon as IconName} size={13} /></span>
+                          <b>{title}</b>
+                          <em>{desc}</em>
+                        </div>
                       ))
                     }
-                  </ul>
-                  <p>{chat.intro}</p>
-                  <div class="assist-bills">
+                  </div>
+                </div>
+                <div class="as-chat">
+                  <div class="c-q">{asst.question}</div>
+                  <div class="c-think"><span class="spin"></span><span class="c-think-t">{asst.thinking}</span></div>
+                  {
+                    asst.steps.map(([tool, arg, result]) => (
+                      <div class="c-step">
+                        <span class="c-st"><Icon name="check" size={9} /></span>
+                        <b class="c-tool">{tool}</b>
+                        <span class="c-arg">{arg}</span>
+                        <em>{result}</em>
+                      </div>
+                    ))
+                  }
+                  <div class="c-ans">
+                    <p class="c-text"></p>
                     {
-                      chat.bills.map(([name, amount, due], i) => (
-                        <div class="assist-bill">
-                          <span class="assist-n">{i + 1}</span>
-                          <span class="assist-name">{name}</span>
+                      asst.bills.map(([name, amount, due]) => (
+                        <div class="c-bill">
+                          <span>{name}</span>
                           <b>{amount}</b>
                           <time>{due}</time>
                         </div>
                       ))
                     }
-                  </div>
-                  <p class="assist-outro">{chat.outro}</p>
-                  <div class="assist-sources">
-                    <span>{chat.cited}</span>
-                    {
-                      chat.sources.map((name) => (
-                        <span class="src">
-                          <Icon name="mail" size={12} />
-                          {name}
-                        </span>
-                      ))
-                    }
+                    <div class="c-cite"><Icon name="mail" size={10} />{asst.cited}</div>
                   </div>
                 </div>
               </div>
-            </div>
-            <div class="assist-suggest">{chat.suggestions.map((name) => <span>{name}</span>)}</div>
-            <div class="assist-input">
-              <span>{chat.placeholder}</span>
-              <span class="assist-send"><Icon name="arrow" size={14} /></span>
-            </div>
-          </div>
-        </div>
-        <div>
-          <span class="kicker">{t.assistant.kicker}</span>
-          <h2>{t.assistant.title}</h2>
-          <p class="section-lead">{t.assistant.lead}</p>
-          <ul class="points">
-            {
-              t.assistant.points.map(([title, desc], i) => (
-                <li>
-                  <span class="point-icon">
-                    <Icon name={ASSIST_ICONS[i]!} size={18} />
-                  </span>
-                  <div>
-                    <b>{title}</b>
-                    <p>{desc}</p>
-                  </div>
-                </li>
-              ))
-            }
-          </ul>
-          <a class="link" href={docs(t.assistant.ctaPath)}>{t.assistant.cta}<Icon name="arrow" size={16} /></a>
-        </div>
-      </section>
-
-      <section class="section split" id="agents">
-        <div>
-          <span class="kicker">{t.agents.kicker}</span>
-          <h2>{t.agents.title}</h2>
-          <p class="section-lead">{t.agents.lead}</p>
-          <ul class="points">
-            {
-              t.agents.points.map(([title, desc], i) => (
-                <li>
-                  <span class="point-icon">
-                    <Icon name={AGENT_ICONS[i]!} size={18} />
-                  </span>
-                  <div>
-                    <b>{title}</b>
-                    <p>{desc}</p>
-                  </div>
-                </li>
-              ))
-            }
-          </ul>
-          <div class="agent-clients">
-            <span>{t.agents.clientsTitle}</span>
-            <div class="provider-list">
-              {AGENT_CLIENTS.map(([name, featured]) => <span class:list={{ featured }}>{name}</span>)}
-            </div>
-          </div>
-          <div class="agent-links">
-            <a class="link" href={docs('assistants/')}>{t.agents.cta2}<Icon name="arrow" size={16} /></a>
-            <a class="link" href={docs('mcp/')}>{t.agents.cta}<Icon name="arrow" size={16} /></a>
-          </div>
-        </div>
-        <div class="agent-col">
-        <div class="flow">
-          <div class="flow-you">
-            <span class="flow-avatar">{t.agents.flow.you.slice(0, 1)}</span>
-            <p>{t.agents.flow.prompt}</p>
-          </div>
-          <ul class="flow-steps">
-            {
-              t.agents.flow.steps.map(([fn, args, result]) => (
-                <li>
-                  <Icon name="check" size={14} class="ok" />
-                  <code>
-                    <span class="fn">{fn}</span>
-                    <span class="args">{args}</span>
-                  </code>
-                  <span class="flow-result">{result}</span>
-                </li>
-              ))
-            }
-            <li class="blocked">
-              <Icon name="lock" size={14} />
-              <code><span class="fn">{t.agents.flow.blocked[0]}</span></code>
-              <span class="flow-result">{t.agents.flow.blocked[1]}</span>
-            </li>
-          </ul>
-        </div>
-        <div class="code-card" data-tabs>
-          <div class="tabs" role="tablist">
-            {t.agents.tabs.map((name, i) => <button type="button" role="tab" aria-selected={i === 0 ? 'true' : 'false'} data-tab={i}>{name}</button>)}
-          </div>
-          <pre data-panel="0"><code>{claudeCmd}</code></pre>
-          <pre data-panel="1" hidden><code>{jsonCfg}</code></pre>
-          <div data-panel="2" class="code-note" hidden>{t.agents.chatgpt}</div>
-          <div class="scopes">
-            {
-              ['read', 'organize', 'draft', 'send', 'automation'].map((s, i) => (
-                <span class={i < 3 ? 'on' : ''}>
-                  {i < 3 && <Icon name="check" size={12} />}
-                  {s}
-                </span>
-              ))
-            }
-          </div>
-        </div>
-        </div>
-      </section>
-
-      <section class="section" id="features">
-        <div class="section-head">
-          <span class="kicker">{t.featuresKicker}</span>
-          <h2>{t.featuresTitle}</h2>
-        </div>
-        <div class="grid">
-          {
-            t.features.map(([title, desc], i) => (
-              <div class="card">
-                <span class="card-icon">
-                  <Icon name={FEATURE_ICONS[i]!} size={20} />
-                </span>
-                <h3>{title}</h3>
-                <p>{desc}</p>
+              <div class="as-in">
+                <div class="as-txt"><span class="as-typed"></span><i class="caret"></i><span class="as-ph">{asst.placeholder}</span></div>
+                <div class="as-bar">
+                  <span><Icon name="bolt" size={13} />Claude<Icon name="chev" size={12} /></span>
+                  <span><Icon name="bulb" size={13} />{asst.think}<Icon name="chev" size={12} /></span>
+                  <b><Icon name="up" size={16} /></b>
+                </div>
               </div>
-            ))
-          }
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="section split subs-section" id="subscriptions">
-        <div>
-          <span class="kicker">{t.subs.kicker}</span>
-          <h2>{t.subs.title}</h2>
-          <p class="section-lead">{t.subs.lead}</p>
-          <ul class="points">
+      <section class="logos">
+        <div class="logos-h"><span>{t.logosTitle}</span></div>
+        {/* 两份相同的列表首尾相接，向左平移一份的宽度后无缝循环；第二份只是视觉重复，读屏跳过 */}
+        <div class="mq">
+          <div class="mq-track">
             {
-              t.subs.points.map(([title, desc], i) => (
-                <li>
-                  <span class="point-icon">
-                    <Icon name={SUBS_ICONS[i]!} size={18} />
-                  </span>
-                  <div>
-                    <b>{title}</b>
-                    <p>{desc}</p>
-                  </div>
-                </li>
+              [false, true].map((copy) => (
+                <ul class="mq-list" aria-hidden={copy ? 'true' : undefined}>
+                  {t.brands.map(([logo, name]) => (
+                    <li>
+                      <Brand logo={logo} size={34} />
+                      <span>{name}</span>
+                    </li>
+                  ))}
+                </ul>
               ))
             }
-          </ul>
-          <a class="link" href={docs('subscriptions/')}>{t.subs.cta}<Icon name="arrow" size={16} /></a>
+          </div>
         </div>
-        {/* 订阅管理示意：数据都是虚构的 */}
-        <div class="subs-shot" aria-hidden="true">
-          <div class="subs">
-            <div class="subs-head">
-              <b>{subs.title}</b>
-              <div class="subs-filters">
-                {
-                  subs.filters.map(([name, n], i) => (
-                    <span class={i === 1 ? 'on' : ''}>
-                      {name} <em>{n}</em>
-                    </span>
-                  ))
-                }
-              </div>
-              <span class="subs-range">{subs.range}</span>
+      </section>
+
+      <section class="sec" id="features">
+        <div class="head"><span class="kick">{f.kicker}</span><h2>{f.title}</h2></div>
+        <div class="bento">
+          <article class="tile wide">
+            <div>
+              <span class="t-ico"><Icon name="inbox" size={20} /></span>
+              <h3>{f.sync.title}</h3>
+              <p>{f.sync.desc}</p>
             </div>
-            <div class="subs-table">
-              <div class="subs-row subs-cols">{subs.cols.map((c) => <span>{c}</span>)}</div>
+            <div class="t-vis v-sync" aria-hidden="true">
+              <div class="toast">
+                <span class="av" style="--c:#f08c2e">{f.sync.toast[0]}</span>
+                <div><b>{f.sync.toast[1]}</b><span>{f.sync.toast[2]}</span></div>
+                <time>{f.sync.toast[3]}</time>
+              </div>
               {
-                subs.rows.map((r) => (
-                  <div class={`subs-row${r.state === 'done' ? ' is-done' : ''}`}>
-                    <span class="subs-sender">
-                      <b>{r.name}</b>
-                      <small>{r.address}</small>
-                    </span>
-                    <span class="subs-count">{r.count}</span>
-                    <span class="subs-rate">
-                      <i class={r.rate < 20 ? 'low' : ''} style={`--w:${Math.max(r.rate, 2)}%`} />
-                      <small>{r.rate === 0 ? subs.never : `${r.rate}%`}</small>
-                    </span>
-                    <span class={`chip ${r.method === subs.rows[1]!.method ? 'purple' : 'blue'}`}>{r.method}</span>
-                    <span class="subs-action">
-                      {r.state === 'button' && <span class="subs-btn">{subs.unsubscribe}</span>}
-                      {r.state === 'done' && (
-                        <span class="subs-done">
-                          <Icon name="check" size={13} />
-                          {subs.done}
-                        </span>
-                      )}
-                    </span>
+                f.sync.accounts.map(([logo, name]) => (
+                  <div class="sync">
+                    <Brand logo={logo} size={20} />
+                    <b>{name}</b>
+                    <span class="live">{f.sync.live}</span>
                   </div>
                 ))
               }
             </div>
-          </div>
-          <div class="float subs-toast">
-            <Icon name="check" size={14} class="ok" />
-            {subs.toast}
-          </div>
+          </article>
+          <article class="tile">
+            <span class="t-ico"><Icon name="sparkles" size={20} /></span>
+            <h3>{f.ai.title}</h3>
+            <p>{f.ai.desc}</p>
+            <div class="t-vis ai mini" aria-hidden="true">
+              <div class="ai-h"><span class="ai-t"><Icon name="sparkles" size={13} />{f.ai.label}</span><em class="tg purple">{f.ai.tag}</em></div>
+              <p>{f.ai.summary}</p>
+              <div class="code">{f.ai.code}<span><Icon name="copy" size={13} /></span></div>
+            </div>
+          </article>
+          <article class="tile">
+            <span class="t-ico"><Icon name="chat" size={20} /></span>
+            <h3>{f.ask.title}</h3>
+            <p>{f.ask.desc}</p>
+            <div class="t-vis v-chat" aria-hidden="true">
+              <div class="q">{f.ask.question}</div>
+              <div class="a"><span set:html={f.ask.answer} /><div class="cite"><Icon name="mail" size={13} />{f.ask.cited}</div></div>
+            </div>
+          </article>
+          <article class="tile wide">
+            <div>
+              <span class="t-ico"><Icon name="bolt" size={20} /></span>
+              <h3>{f.rules.title}</h3>
+              <p>{f.rules.desc}</p>
+            </div>
+            <div class="t-vis v-rule" aria-hidden="true">
+              {
+                f.rules.rules.map(([cond, action]) => (
+                  <div class="rule">
+                    <span class="k">{f.rules.when}</span>
+                    <span class="chip">{cond}</span>
+                    <span class="arr"><Icon name="arrow" size={14} /></span>
+                    <span class="chip blue">{action}</span>
+                  </div>
+                ))
+              }
+              <div class="push">
+                <span class="push-ico" set:html={logo} />
+                <div><b>{f.rules.push[0]}</b><span>{f.rules.push[1]}</span></div>
+                <time>{f.rules.push[2]}</time>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
 
-      <section class="section privacy">
-        <div class="section-head">
-          <span class="kicker">{t.privacy.kicker}</span>
-          <h2>{t.privacy.title}</h2>
+      <section class="sec" id="agents">
+        <div class="head">
+          <span class="kick">{ag.kicker}</span>
+          <h2>{ag.title}</h2>
+          <p>{ag.lead}</p>
         </div>
-        <div class="privacy-grid">
+        <div class="clients">
           {
-            t.privacy.points.map(([title, desc], i) => (
-              <div class="privacy-item">
-                <Icon name={PRIVACY_ICONS[i]!} size={22} />
-                <h3>{title}</h3>
-                <p>{desc}</p>
+            AGENT_CLIENTS.map(([name, logo]) => (
+              <span>
+                <Brand logo={logo} size={18} />
+                {name}
+              </span>
+            ))
+          }
+        </div>
+        <div class="flow3">
+          <article class="fs">
+            <div class="fs-h"><i>1</i><div><h3>{ag.consent.title}</h3><p>{ag.consent.desc}</p></div></div>
+            <div class="fs-vis" aria-hidden="true">
+              <div class="cs-top"><b>{ag.consent.heading}</b><span><Brand logo="openai" size={14} />{ag.consent.requests}</span></div>
+              {
+                ag.consent.scopes.map(([name, tag, tone, on]) => (
+                  <div class:list={['cs-opt', { off: !on }]}>
+                    <span class:list={['ck', { on }]}>{on && <Icon name="check" size={10} />}</span>
+                    <b>{name}</b>
+                    <em class={`tg ${tone}`}>{tag}</em>
+                  </div>
+                ))
+              }
+              <div class="cs-mb"><span>{ag.consent.mailboxes}</span><span class="cs-seg"><i>{ag.consent.all}</i><b>{ag.consent.selected}</b></span></div>
+              <div class="cs-boxes">
+                {
+                  ag.consent.boxes.map(([logo, name], i) => (
+                    <span class:list={{ on: i === 0 }}>
+                      <Brand logo={logo} size={12} />
+                      {name}
+                    </span>
+                  ))
+                }
+              </div>
+              <div class="cs-btn"><span>{ag.consent.deny}</span><b>{ag.consent.allow}</b></div>
+            </div>
+          </article>
+          <article class="fs">
+            <div class="fs-h"><i>2</i><div><h3>{ag.run.title}</h3><p>{ag.run.desc}</p></div></div>
+            <div class="fs-vis exec" aria-hidden="true">
+              <div class="run-ask"><span><Brand logo="openai" size={14} /></span>{ag.run.ask}</div>
+              {
+                ag.run.steps.map(([tool, result, state]) => (
+                  <div class={`run-step ${state}`}>
+                    <span class="run-i"><Icon name={state === 'ok' ? 'check' : state === 'wait' ? 'clock' : 'lock'} size={11} /></span>
+                    <b>{tool}</b>
+                    <em>{result}</em>
+                  </div>
+                ))
+              }
+            </div>
+          </article>
+          <article class="fs">
+            <div class="fs-h"><i>3</i><div><h3>{ag.approve.title}</h3><p>{ag.approve.desc}</p></div></div>
+            <div class="fs-vis approve" aria-hidden="true">
+              <div class="ap-top"><em class="tg orange">{ag.approve.pending}</em><span>{ag.approve.source}</span></div>
+              {ag.approve.fields.map(([k, v]) => <div class="ap-row"><span>{k}</span>{v}</div>)}
+              <p>{ag.approve.body}</p>
+              <div class="ap-btn"><span>{ag.approve.reject}</span><span>{ag.approve.edit}</span><b><Icon name="send" size={12} />{ag.approve.send}</b></div>
+              <div class="ap-undo"><Icon name="clock" size={11} />{ag.approve.undo}</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="head"><span class="kick">{t.more.kicker}</span><h2>{t.more.title}</h2></div>
+        <div class="more">
+          {
+            t.more.items.map(([icon, title, desc, color]) => (
+              <div class={`m-card ${color}`}>
+                <span class="m-ico"><Icon name={icon as IconName} size={18} /></span>
+                <b>{title}</b>
+                <span class="m-desc">{desc}</span>
               </div>
             ))
           }
         </div>
       </section>
 
-      <section class="section split start" id="start">
+      <section class="sec start" id="start">
         <div>
-          <span class="kicker">{t.start.kicker}</span>
-          <h2>{t.start.title}</h2>
-          <ol class="steps">
+          <span class="kick">{t.start.kicker}</span>
+          <h2>{t.start.title[0]}<br />{t.start.title[1]}</h2>
+          <p class="st-lead">{t.start.lead}</p>
+          <ol class="st-steps">
             {
               t.start.steps.map(([title, desc], i) => (
                 <li>
-                  <span class="step-n">{i + 1}</span>
+                  <i>{i + 1}</i>
                   <div>
                     <b>{title}</b>
-                    <p>{desc}</p>
+                    <span>{desc}</span>
                   </div>
                 </li>
               ))
             }
           </ol>
-          <a class="link" href={docs('quick-start/')}>{t.start.docs}<Icon name="arrow" size={16} /></a>
-        </div>
-        <div class="code-card terminal">
-          <div class="win-bar"><span></span><span></span><span></span></div>
-          <pre><code>{startCode.map((line) => (line.startsWith('#') ? <span class="cm">{line}{'\n'}</span> : <span>{line}{'\n'}</span>))}</code></pre>
-        </div>
-      </section>
-
-      <section class="cta">
-        <h2>{t.cta.title}</h2>
-        <div class="hero-actions">
-          <a class="btn primary" href={docs('quick-start/')}>{t.cta.primary}<Icon name="arrow" size={18} /></a>
-          <a class="btn ghost" href={REPO}
-            ><Icon name="star" size={18} />{t.cta.secondary}<span class="btn-count" data-stars hidden><span data-stars-n></span></span></a
-          >
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <span class="brand-logo" set:html={logo} />
-          <div>
-            <b>DaMail</b>
-            <p>{t.footer.tagline}</p>
+          <div class="st-act">
+            <a class="btn primary" href={docs('quick-start/')}>{t.start.docs}<Icon name="arrow" size={18} /></a>
           </div>
         </div>
+        {/* 终端：打出安装命令，再逐行显示和 install.sh 一致的输出 */}
+        <div class="tw">
+          <div class="tw-bar">
+            <i></i><i></i><i></i><span>Terminal</span>
+            <button type="button" data-copy={INSTALL} data-copied={t.hero.copied} aria-label={t.hero.copy} title={t.hero.copy}><Icon name="copy" size={16} class="i-copy" /><Icon name="check" size={16} class="i-done" /></button>
+          </div>
+          <div class="tw-body" data-term data-cmd={INSTALL} aria-label={INSTALL}>
+            <div class="tl show"><span class="tp">$</span> <span class="tw-cmd"></span><i class="tw-caret"></i></div>
+            {TERM.map(([cls, html]) => <div class:list={['tl', cls]} set:html={html} />)}
+          </div>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <a class="brand" href={prefix}><span class="logo" set:html={logo} /><span>DaMail</span></a>
+        <span>{t.footer.tagline}</span>
         <nav>
           <a href={docs()}>{t.footer.docs}</a>
           <a href={`${REPO}/releases`}>{t.footer.changelog}</a>
           <a href={`${REPO}/issues`}>{t.footer.issues}</a>
-          <a href={`${REPO}/blob/main/LICENSE`}>{t.footer.license}</a>
-          <a href={REPO}>GitHub</a>
         </nav>
-      </div>
-    </footer>
+      </footer>
+    </main>
 
     <script>
       const root = document.documentElement;
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      /** 元素进入视口（且页面在前台）时才播放演示，离开后暂停在下一轮开头 */
+      const watch = (el: Element) => {
+        const state = { visible: false };
+        new IntersectionObserver(([e]) => (state.visible = !!e?.isIntersecting), { threshold: 0.3 }).observe(el);
+        return async () => {
+          while (!state.visible || document.hidden) await sleep(300);
+        };
+      };
+
       document.getElementById('theme-toggle')?.addEventListener('click', () => {
         const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
         root.dataset.theme = next;
@@ -571,18 +548,34 @@ const GITHUB_PATH =
         } catch {}
       });
 
+      // 复制按钮：成功后图标换成对勾；剪贴板接口不可用（如非 HTTPS）时退回 execCommand
+      const copyText = async (text: string) => {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+          document.body.append(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          ta.remove();
+          return ok;
+        }
+      };
       document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+        let timer = 0;
         btn.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(btn.dataset.copy ?? '');
-            btn.classList.add('done');
-            btn.title = btn.dataset.copied ?? '';
-            setTimeout(() => btn.classList.remove('done'), 1500);
-          } catch {}
+          if (!(await copyText(btn.dataset.copy ?? ''))) return;
+          btn.classList.add('done');
+          clearTimeout(timer);
+          timer = window.setTimeout(() => btn.classList.remove('done'), 2000);
         });
       });
 
-      // GitHub Star 数：浏览器直接读公开 API（未登录每小时 60 次），本地缓存 1 小时；读不到就只显示图标
+      // GitHub Star 数：浏览器直接读公开 API（未登录每小时 60 次），本地缓存 1 小时；读不到就不显示
       const STARS_KEY = 'damail.site.stars';
       const fmtStars = (n: number) => (n < 1000 ? String(n) : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0).replace(/\.0$/, '')}k`);
       const showStars = (n: number) =>
@@ -611,15 +604,120 @@ const GITHUB_PATH =
           .catch(() => {});
       }
 
-      document.querySelectorAll<HTMLElement>('[data-tabs]').forEach((box) => {
-        const tabs = box.querySelectorAll<HTMLButtonElement>('[data-tab]');
-        tabs.forEach((tab) =>
-          tab.addEventListener('click', () => {
-            tabs.forEach((x) => x.setAttribute('aria-selected', String(x === tab)));
-            box.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== tab.dataset.tab));
-          }),
-        );
-      });
+      // 助手演示：输入问题 → 发送 → 依次调用工具 → 流式回答，循环播放；减少动态效果时直接显示最终画面
+      const panel = document.querySelector<HTMLElement>('[data-asst]');
+      if (panel) {
+        const $ = <T extends HTMLElement>(sel: string) => panel.querySelector<T>(sel)!;
+        const { q = '', a = '', thinking = '', thought = '' } = panel.dataset;
+        const typed = $('.as-typed'),
+          send = $('.as-bar b'),
+          think = $('.c-think'),
+          thinkT = $('.c-think-t'),
+          text = $('.c-text'),
+          ask = $('.c-q'),
+          ans = $('.c-ans'),
+          cite = $('.c-cite');
+        const steps = [...panel.querySelectorAll<HTMLElement>('.c-step')];
+        const bills = [...panel.querySelectorAll<HTMLElement>('.c-bill')];
+        const all = [ask, think, ...steps, ans, text, ...bills, cite];
+        const show = (el: HTMLElement) => el.classList.add('show');
+        if (reduced) {
+          panel.classList.add('chatting');
+          all.forEach(show);
+          think.classList.add('done');
+          thinkT.textContent = thought;
+          text.textContent = a;
+        } else {
+          const waitVisible = watch(panel);
+          (async () => {
+            for (;;) {
+              panel.classList.remove('chatting');
+              all.forEach((el) => el.classList.remove('show'));
+              think.classList.remove('done');
+              thinkT.textContent = thinking;
+              typed.textContent = text.textContent = '';
+              await waitVisible();
+              await sleep(900);
+              for (const ch of q) {
+                typed.textContent += ch;
+                await sleep(90 + Math.random() * 80);
+              }
+              await sleep(500);
+              send.classList.add('press');
+              await sleep(150);
+              send.classList.remove('press');
+              typed.textContent = '';
+              panel.classList.add('chatting');
+              show(ask);
+              await sleep(400);
+              show(think);
+              await sleep(500);
+              for (const st of steps) {
+                st.classList.add('run');
+                show(st);
+                await sleep(700);
+                st.classList.remove('run');
+                await sleep(150);
+              }
+              think.classList.add('done');
+              thinkT.textContent = thought;
+              show(ans);
+              show(text);
+              for (const ch of a) {
+                text.textContent += ch;
+                await sleep(35);
+              }
+              for (const b of bills) {
+                await sleep(220);
+                show(b);
+              }
+              await sleep(300);
+              show(cite);
+              await sleep(6000);
+            }
+          })();
+        }
+      }
+
+      // 终端演示：打出安装命令，再按各步骤的大致耗时逐行显示输出，并自动滚到底部
+      const term = document.querySelector<HTMLElement>('[data-term]');
+      if (term) {
+        const cmd = term.querySelector<HTMLElement>('.tw-cmd')!;
+        const lines = [...term.querySelectorAll<HTMLElement>('.tl')].slice(1);
+        const CMD = term.dataset.cmd ?? '';
+        if (reduced) {
+          cmd.textContent = CMD;
+          lines.forEach((l) => l.classList.add('show'));
+          term.classList.add('done');
+          term.scrollTop = term.scrollHeight;
+        } else {
+          const waitVisible = watch(term);
+          const DELAY = [500, 120, 900, 500, 400, 700, 300, 900, 500, 500, 300, 400, 300, 600, 500, 900, 200, 200, 150, 120];
+          const toBottom = (smooth: boolean) => term.scrollTo({ top: term.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
+          (async () => {
+            for (;;) {
+              cmd.textContent = '';
+              term.classList.remove('done');
+              lines.forEach((l) => l.classList.remove('show'));
+              toBottom(false);
+              await waitVisible();
+              await sleep(700);
+              for (const ch of CMD) {
+                cmd.textContent += ch;
+                await sleep(45 + Math.random() * 50);
+              }
+              await sleep(400);
+              term.classList.add('done');
+              for (let i = 0; i < lines.length; i++) {
+                await sleep(DELAY[i] ?? 300);
+                lines[i]!.classList.add('show');
+                toBottom(true);
+              }
+              await sleep(7000);
+            }
+          })();
+        }
+      }
     </script>
   </body>
 </html>

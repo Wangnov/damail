@@ -1,60 +1,60 @@
 ---
-title: 日报周报与统计
-description: 每天、每周自动汇总邮件，附 AI 简报；收发趋势、时段热力图和发件人排名
+title: Reports & stats
+description: Daily and weekly mail digests with an AI brief, plus trends, hourly heatmaps and top senders
 ---
 
-## 日报和周报
+## Daily and weekly reports
 
-每天早上汇总前一天的邮件：收了多少、哪些重要、哪些等你回复、哪些账单快到期，启用 AI 时还会写一段简报。每周一再出一份上周的周报。
+Every morning DaMail sums up the previous day: how much mail arrived, what's important, what's waiting for your reply and which bills are due — with a short AI brief when AI is on. Every Monday there's a weekly report for the previous week.
 
-入口：顶部导航的 **报告**。
+Go to **Reports** in the top navigation.
 
-### 报告内容
+### What's in a report
 
-| 部分 | 内容 |
+| Section | Contents |
 |---|---|
-| 概况 | 收到、重要、待回复、发出的数量，和前一天 / 上周对比；生成时的收件箱未读数 |
-| AI 简报 | 用默认模型写的一段总结；AI 未启用时只有统计数字 |
-| 每日收发 | 周报里按天展示 |
-| 需要回复 | AI 判断需要回复、你还没回的邮件 |
-| 重要邮件 | AI 判定为高优先级的邮件 |
-| 账单 | 提取到金额和截止日期的邮件 |
-| 分类 | 各分类的邮件数 |
-| 发件最多 / 各邮箱收到 | 排名 |
+| Overview | Received, important, needs reply and sent, compared with the previous day / week; inbox unread at generation time |
+| AI brief | A short summary written by the default model; numbers only when AI is off |
+| Daily volume | Per day, in weekly reports |
+| Needs reply | Mail AI says needs a reply that you haven't answered |
+| Important | Mail AI marked high priority |
+| Bills | Mail with extracted amounts and due dates |
+| Categories | Count per category |
+| Top senders / per mailbox | Rankings |
 
-统计口径：不含已发送、草稿、垃圾邮件文件夹和自己发给自己的邮件，同一封邮件在多个文件夹只算一次。
+Counting rules: sent, drafts and junk folders and mail to yourself are excluded, and a message in several folders counts once.
 
-### 设置
+### Settings
 
-在报告页的「报告设置」里：
+Under **Report settings** on the Reports page:
 
-| 设置 | 默认 |
+| Setting | Default |
 |---|---|
-| 每日日报 | 开启，每天 8 点生成，汇总前一天 |
-| 每周周报 | 开启，每周一 9 点生成，汇总上周一到周日 |
+| Daily report | On, generated at 8:00 for the previous day |
+| Weekly report | On, generated Mondays at 9:00 for the previous Monday–Sunday |
 
-也可以点「生成报告」手动生成任意一天或一周的报告；周期还没结束时只统计到当前时间。同一个周期重新生成会覆盖原来那份。
+**Generate report** creates a report for any day or week on demand; for a period that isn't over, it counts up to now. Generating again for the same period replaces the old report.
 
-:::caution[时区]
-报告按**服务器时区**划分「前一天」和生成时间。Docker 容器默认是 UTC，在中国使用时在 `docker-compose.yml` 的 damail 服务 `environment` 里加上 `TZ: Asia/Shanghai`。
+:::caution[Time zone]
+Reports use the **server's time zone** for day boundaries and generation times. Docker containers default to UTC — add `TZ: Europe/Berlin` (or your zone) under `environment` for the damail service in `docker-compose.yml`.
 :::
 
-### 推送
+### Push
 
-想在手机或群里收到报告，到[通知渠道](/docs/automation/notifications/)订阅「每日邮件日报」`report.daily` 和「每周邮件周报」`report.weekly`。
+To get reports on your phone or in a group chat, subscribe a [notification channel](/docs/automation/notifications/) to `report.daily` and `report.weekly`.
 
-AI 助手也能读报告，可以直接问「今天的日报说了什么」。
+The AI assistant can read reports too — ask "what did today's report say?".
 
-## 数据统计
+## Stats
 
-入口：顶部导航的 **统计**。可以看最近 7 天、30 天、90 天或 1 年：
+Go to **Stats** in the top navigation and pick 7 days, 30 days, 90 days or 1 year:
 
-- **收发趋势**：每日（1 年按周）收到和发出的数量
-- **收信时段**：星期 × 小时的热力图，看邮件都在什么时候来
-- **分类**：各分类的数量和未读
-- **发件最多 / 发件域名**：谁给你发得最多
-- **各邮箱**：每个邮箱的收发量
-- **未读积压**：收件箱未读按邮件时间分成 24 小时内、1–7 天、7–30 天、30 天以上
-- **需回复已回复**：AI 判断需要回复的邮件里，你回了多少
+- **Volume**: received and sent per day (per week for 1 year)
+- **Hours**: a weekday × hour heatmap of when mail arrives
+- **Categories**: count and unread per category
+- **Top senders / domains**: who emails you most
+- **Mailboxes**: received and sent per mailbox
+- **Unread backlog**: inbox unread by age — under 24 hours, 1–7 days, 7–30 days, over 30 days
+- **Reply rate**: of the mail AI said needs a reply, how much you answered
 
-口径和日报周报一致。
+Counting matches the reports.

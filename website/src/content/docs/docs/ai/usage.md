@@ -1,45 +1,45 @@
 ---
-title: 用量与费用
-description: 每次调用模型的记录、费用统计和价格设置
+title: Usage & cost
+description: A record of every model call, cost statistics and price settings
 ---
 
-DaMail 会记录每一次模型调用，方便你排查失败、控制费用。入口：**智能 → 用量**。
+DaMail records every model call so you can track down failures and keep costs in check. Go to **AI → Usage**.
 
-## 请求记录
+## Requests
 
-每次调用模型记一条，包括时间、用途、渠道、模型、状态、耗时、输入 / 输出 token、缓存命中和费用。失败的请求显示错误信息。可以按用途、模型、渠道和状态筛选。
+One row per model call: time, purpose, channel, model, status, latency, input / output tokens, cache hits and cost. Failed requests show the error. Filter by purpose, model, channel and status.
 
-用途分为：
+Purposes:
 
-| 用途 | 来自 |
+| Purpose | Comes from |
 |---|---|
-| 邮件分析 | 新邮件自动分析、补做历史邮件 |
-| 起草回复 | 收信规则的「AI 起草回复」动作 |
-| 日报周报 | 报告里的 AI 简报 |
-| 语义搜索 | [AI 搜索](/docs/ai/search/) |
-| AI 助手 | 助手的每一轮工具调用分别计一次 |
-| 对话标题 | 给助手对话自动起标题 |
-| 邮件翻译 | [邮件翻译](/docs/ai/translate/) |
-| 标签推荐 | [分类与标签](/docs/ai/labels/)里的推荐 |
-| 测试 | 模型配置里的「测试」按钮 |
+| Mail analysis | Automatic analysis of new mail and analyzing past mail |
+| Reply drafts | The **AI reply draft** action in inbox rules |
+| Reports | The AI brief in reports |
+| Semantic search | [AI search](/docs/ai/search/) |
+| AI assistant | Each round of the assistant's tool calls counts once |
+| Chat titles | Automatic titles for assistant conversations |
+| Translation | [Translation](/docs/ai/translate/) |
+| Label suggestions | Suggestions in [Categories & labels](/docs/ai/labels/) |
+| Test | The **Test** button in Models |
 
-请求记录保留 180 天。
+Requests are kept for 180 days.
 
-## 用量统计
+## Stats
 
-按 24 小时、7 天、30 天、90 天查看请求量、失败数、费用、token 用量和平均耗时，并按模型、用途和渠道拆分，和上一个周期对比。
+See request counts, failures, cost, token usage and average latency for the last 24 hours, 7, 30 or 90 days, broken down by model, purpose and channel and compared with the previous period.
 
-## 费用怎么算
+## How cost is calculated
 
-费用 = 模型单价 × token 数 × 渠道倍率。单价在[模型配置](/docs/ai/models/)里编辑渠道时设置（美元 / 百万 tokens），可以点「填充参考价格」自动填常见模型的官方价。
+Cost = model price × tokens × channel rate. Prices are set when editing a channel in [Models](/docs/ai/models/) (USD per million tokens); **Fill reference prices** fills in official prices for common models.
 
-- 缓存单价留空时按输入单价计算
-- 没设置价格的模型不计入费用，统计页会提示有多少次请求没算进去
-- 补上价格后，点「按当前价格补算」可以重新计算这些请求的费用
+- An empty cache price falls back to the input price
+- Models without a price aren't counted; the stats page tells you how many requests were left out
+- After adding prices, **Recalculate at current prices** fills in the cost of those requests
 
-## 控制费用
+## Keeping costs down
 
-- 邮件分析用便宜、快速的模型，推理强度选「低」
-- 用[分析范围](/docs/ai/analysis/#设置)只分析重要的邮箱
-- 把通知类、营销类发件人加入忽略名单
-- 助手单独用一个强一些的模型，日常分析不受影响
+- Use a cheap, fast model with low effort for mail analysis
+- Limit [analysis scope](/docs/ai/analysis/#settings) to the mailboxes that matter
+- Add notification and marketing senders to the ignore list
+- Give the assistant its own stronger model so everyday analysis stays cheap

@@ -1,69 +1,69 @@
 ---
-title: 模型配置
-description: 添加模型渠道，给邮件分析、AI 助手和翻译选择模型
+title: Models
+description: Add model channels and pick models for mail analysis, the assistant and translation
 ---
 
-DaMail 的 AI 功能**默认关闭**，也不依赖任何 DaMail 自己的云服务：模型的 Key 由你提供，请求从你的服务器直接发给模型服务商。
+AI features in DaMail are **off by default**, and there is no DaMail cloud service involved: you bring your own model keys, and requests go straight from your server to the model provider.
 
-入口：**智能 → 模型配置**。配置分两步：先添加**渠道**（服务商 + 接口地址 + Key），再给各项功能选**模型**。
+Go to **AI → Models**. Setup has two steps: add a **channel** (provider + endpoint + key), then pick **models** for each feature.
 
-## 添加渠道
+## Add a channel
 
-点右上角「添加渠道」：
+Click **Add channel**:
 
-| 字段 | 说明 |
+| Field | Description |
 |---|---|
-| 名称 | 自己起的名字，如「Claude 官方」「DeepSeek」 |
-| 服务商 | **Anthropic** 或 **OpenAI 兼容接口** |
-| 接口地址 | Anthropic 官方接口留空，也可以填兼容 Anthropic 协议的代理地址；OpenAI 兼容接口必填，DaMail 会调用 `{接口地址}/chat/completions` 和 `{接口地址}/models` |
-| API Key | 加密保存在你的数据库里，页面上只显示首尾几位 |
-| 可用模型 | 点「同步上游」拉取模型列表后勾选要用的，或者直接输入模型名添加 |
-| 模型价格 | 美元 / 百万 tokens，只用来统计费用，可以点「填充参考价格」；中转站按官方价打折时填**倍率** |
-| 并发限制 | 这个渠道同时最多发几个请求，默认不限制。经常遇到 429 时设为 1～2 |
+| Name | Anything you like, such as "Claude" or "DeepSeek" |
+| Provider | **Anthropic** or **OpenAI-compatible API** |
+| Base URL | Leave empty for the official Anthropic API, or enter an Anthropic-compatible proxy. Required for OpenAI-compatible APIs; DaMail calls `{Base URL}/chat/completions` and `{Base URL}/models` |
+| API key | Stored encrypted in your database; only the first and last few characters are shown |
+| Models | Click **Sync upstream** to fetch the model list and tick the ones you want, or type model names |
+| Prices | USD per million tokens, used only for cost tracking. **Fill reference prices** fills in common models; set a **rate** if a reseller discounts official prices |
+| Concurrency | Maximum parallel requests on this channel, unlimited by default. Set 1–2 if you see frequent 429s |
 
-可以添加多个渠道，比如邮件分析用便宜的 DeepSeek，助手用 Claude。
+You can add several channels — for example a cheap DeepSeek channel for analysis and Claude for the assistant.
 
-### 常见服务商
+### Common providers
 
-| 服务商 | 服务商类型 | 接口地址 |
+| Provider | Type | Base URL |
 |---|---|---|
-| Anthropic Claude | Anthropic | 留空 |
-| DeepSeek | OpenAI 兼容 | `https://api.deepseek.com` |
-| 通义千问（百炼） | OpenAI 兼容 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| Moonshot（Kimi） | OpenAI 兼容 | `https://api.moonshot.cn/v1` |
-| OpenAI | OpenAI 兼容 | `https://api.openai.com/v1` |
-| 本地 Ollama | OpenAI 兼容 | `http://<Ollama 所在主机>:11434/v1` |
+| Anthropic Claude | Anthropic | Leave empty |
+| OpenAI | OpenAI-compatible | `https://api.openai.com/v1` |
+| DeepSeek | OpenAI-compatible | `https://api.deepseek.com` |
+| Qwen (Alibaba Cloud) | OpenAI-compatible | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| Moonshot (Kimi) | OpenAI-compatible | `https://api.moonshot.cn/v1` |
+| Local Ollama | OpenAI-compatible | `http://<ollama-host>:11434/v1` |
 
-:::note[本地模型]
-DaMail 跑在容器里时，`localhost` 指的是容器自己。Ollama 装在宿主机上时，填宿主机的局域网地址，或者在 Compose 里给 damail 服务配置 `extra_hosts: ["host.docker.internal:host-gateway"]` 后填 `http://host.docker.internal:11434/v1`。模型需要能稳定输出 JSON，参数太小的模型分类效果会比较差。
+:::note[Local models]
+Inside a container, `localhost` is the container itself. If Ollama runs on the host, use the host's LAN address, or add `extra_hosts: ["host.docker.internal:host-gateway"]` to the damail service in Compose and use `http://host.docker.internal:11434/v1`. The model must produce reliable JSON; very small models categorize poorly.
 :::
 
-## 选择模型
+## Pick models
 
-页面下方有三处模型设置：
+There are three model settings at the bottom of the page:
 
-| 用途 | 用在哪里 | 建议 |
+| Setting | Used for | Tip |
 |---|---|---|
-| **默认模型** | 新邮件分类摘要、日报周报的 AI 简报、AI 搜索、标签推荐 | 邮件量大时选便宜、快的模型 |
-| **AI 助手** | 右下角的对话面板 | 需要支持工具调用，选能力强一些的模型 |
-| **邮件翻译** | 邮件详情里的「翻译」按钮 | 可以单独选渠道和模型，并设置目标语言 |
+| **Default model** | Categorizing and summarizing new mail, the AI brief in reports, AI search, label suggestions | Pick something cheap and fast if you get a lot of mail |
+| **AI assistant** | The chat panel in the corner | Needs tool calling; a stronger model works better |
+| **Translation** | The **Translate** button on a message | Can use its own channel and model, with a target language |
 
-助手和翻译默认**跟随默认渠道和模型**；换了渠道需要重新选模型。
+The assistant and translation **follow the default channel and model** unless you change them; switching channel means picking a model again.
 
-**推理强度**（思考强度）控制模型思考多久：分类任务用「低」就够，越高越慢、越费 token。Anthropic 支持 low / medium / high / xhigh / max，OpenAI 兼容接口支持 low / medium / high。
+**Effort** controls how long the model thinks: "low" is enough for categorizing; higher is slower and uses more tokens. Anthropic supports low / medium / high / xhigh / max; OpenAI-compatible APIs support low / medium / high.
 
-改完点「保存设置」，再打开顶部的**启用 AI** 开关。每个模型旁边的「测试」按钮会真实调用一次，显示耗时或错误信息。
+Click **Save settings**, then turn on **Enable AI** at the top. The **Test** button next to each model makes a real call and shows the latency or the error.
 
-## 限流和重试
+## Rate limits and retries
 
-- 服务商返回 429 时，这个渠道会自动暂停一会儿（按 `Retry-After`，5 秒到 2 分钟），然后继续处理排队的请求
-- 渠道列表的「状态」列显示进行中、排队和最近一次被限流的时间
-- 邮件分析失败会自动重试，最后仍失败就跳过 AI，**收信规则和通知照常执行**
+- When a provider returns 429, the channel pauses briefly (following `Retry-After`, 5 seconds to 2 minutes) and then continues with queued requests
+- The channel list shows active and queued requests and when it was last rate-limited
+- Failed analysis is retried; if it still fails, AI is skipped and **inbox rules and notifications still run**
 
-## 隐私
+## Privacy
 
-:::caution[哪些内容会发给模型]
-启用后，邮件的发件人、收件人、主题和正文（超过 2 万字截断）会发送给你选的服务商。可以只对部分邮箱启用分析、把某些发件人加入忽略名单，或者完全使用本地模型。
+:::caution[What is sent to the model]
+Once enabled, the sender, recipients, subject and body (truncated at 20,000 characters) of each message are sent to the provider you choose. You can limit analysis to some mailboxes, ignore certain senders, or use a local model only.
 :::
 
-所有提示词都要求模型把邮件内容当作**不可信的数据**：模型输出只用来打标签、写摘要和起草**待审批**的回复，不会触发发信。各项功能用的系统提示词可以在 **智能 → 提示词** 里查看。
+Every prompt tells the model to treat message content as **untrusted data**. Model output is only used for labels, summaries and replies that **wait for your approval** — it never triggers sending. You can read the system prompts for each feature under **AI → Prompts**.

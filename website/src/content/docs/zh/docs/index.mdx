@@ -1,0 +1,56 @@
+---
+title: 简介
+description: DaMail 是什么、能做什么、适合谁用
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+DaMail 把多个邮箱（QQ、163、Gmail、Outlook、iCloud、企业邮……）集中同步到**你自己的服务器**上，在网页上统一收发和整理，并通过 **MCP** 和 **REST API** 安全地交给 AI Agent 使用。
+
+名字读作「哒咩」（日语 だめ，“不行”）：没有你点头，Agent 一封信也发不出去。
+
+## 它解决什么问题
+
+<CardGrid>
+  <Card title="邮箱太多" icon="email">
+    工作、个人、项目各一个，来回切换客户端。DaMail 把它们合并成一个收件箱，回复时自动用对应的邮箱发出。
+  </Card>
+  <Card title="想让 AI 帮忙，又不放心交出账号" icon="approve-check">
+    Agent 只拿到 DaMail 签发的、限定权限和邮箱范围的凭证；它写的邮件默认要你审批才会发出。
+  </Card>
+  <Card title="重要邮件被淹没" icon="star">
+    AI 自动分类、判断优先级和是否需要回复，提取验证码、账单和物流信息，再按规则推送到手机。
+  </Card>
+  <Card title="数据想留在自己手里" icon="seti:lock">
+    自托管，凭证加密保存，AI 默认关闭、可以接本地模型，不经过任何第三方服务。
+  </Card>
+</CardGrid>
+
+## 主要功能
+
+| 模块 | 内容 |
+|---|---|
+| 同步与阅读 | IMAP IDLE 实时推送、会话归并、跨文件夹去重、中文编码与中文搜索、HTML 邮件沙箱渲染 |
+| 写信与整理 | 富文本写信、签名、延迟发送可撤销、定时发送、草稿审批、订阅管理，操作回写到邮箱服务器 |
+| AI 功能 | 邮件分析、分类与标签、AI 搜索、AI 助手、邮件翻译、用量与费用统计 |
+| 自动化 | 收信规则、通知渠道、日报周报、数据统计、等回复与跟进提醒 |
+| 开放接口 | MCP（Streamable HTTP）、REST API、API Key 权限与邮箱范围、MCP OAuth（ChatGPT、Claude Duet、Grok Bot、Meta Muse 等）、Webhook |
+
+## 架构
+
+DaMail 是一个 Node.js 服务加一个 PostgreSQL 数据库，打包成一个 Docker 镜像：
+
+- **服务端**：Hono + Drizzle ORM + imapflow，负责同步、发信、AI 任务队列、MCP 和 REST API
+- **网页**：React + Ant Design，构建后由服务端直接提供
+- **数据**：邮件索引和设置在 PostgreSQL，原始邮件和附件在数据目录；邮箱凭证用 `MASTER_KEY` 加密
+
+## 从这里开始
+
+<CardGrid>
+  <LinkCard title="快速开始" description="用 Docker Compose 十分钟部署好" href="/zh/docs/quick-start/" />
+  <LinkCard title="接入邮箱" description="各家邮箱的授权码和 OAuth 配置" href="/zh/docs/mailboxes/" />
+  <LinkCard title="模型配置" description="接入 Claude、DeepSeek 或本地模型，开启 AI 功能" href="/zh/docs/ai/models/" />
+  <LinkCard title="订阅管理" description="找出很少打开的订阅邮件，一键退订" href="/zh/docs/subscriptions/" />
+  <LinkCard title="接入 AI 助手" description="让 Claude Duet、ChatGPT dots、Grok Bot、Meta Muse 帮你管理邮件" href="/zh/docs/assistants/" />
+  <LinkCard title="MCP 接入" description="让 Claude、Cursor 等 Agent 安全地使用你的邮件" href="/zh/docs/mcp/" />
+</CardGrid>

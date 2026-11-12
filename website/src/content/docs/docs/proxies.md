@@ -1,44 +1,44 @@
 ---
-title: 代理设置
-description: 服务器直连不上邮箱或外部服务时，让 DaMail 经 HTTP / SOCKS 代理连接
+title: Proxies
+description: Route DaMail's outbound connections through an HTTP or SOCKS proxy when the server can't reach a mail provider or service directly
 ---
 
-服务器直连不上某些服务时（比如国内服务器连 Gmail、访问 `chatgpt.com`），可以在「设置 → 代理设置」添加代理，让这些连接经代理转发。代理按需选用：没选代理的地方仍然直连。
+Some servers can't reach certain services directly, for example a server in mainland China connecting to Gmail or `chatgpt.com`. For those, add a proxy under **Settings → Proxies**. You pick the proxy feature by feature, and everything else keeps connecting directly.
 
-## 添加代理
+## Add a proxy
 
-1. 打开「设置 → 代理设置」，点「添加代理」
-2. 填写：
+1. Open **Settings → Proxies** and click **Add proxy**
+2. Fill in the form:
 
-| 字段 | 说明 |
+| Field | Notes |
 |---|---|
-| 名称 | 自己看的名字，如「香港代理」 |
-| 类型 | SOCKS5、HTTP、HTTPS、SOCKS4。HTTP / HTTPS 代理需要支持 CONNECT |
-| 代理地址、端口 | 如 `127.0.0.1` 和 `1080`。DaMail 跑在 Docker 里时，`127.0.0.1` 指的是容器自己，要连宿主机上的代理请填宿主机的内网地址 |
-| 用户名、密码 | 代理需要认证时填写；密码加密保存，编辑时留空表示不修改 |
-| 测试目标 | 点「测试连接」时经代理连到这个地址，默认 `imap.gmail.com:993`，可以换成你要连的服务器 |
+| Name | A label for yourself, such as "Hong Kong proxy" |
+| Type | SOCKS5, HTTP, HTTPS or SOCKS4. HTTP and HTTPS proxies must support CONNECT |
+| Host and port | For example `127.0.0.1` and `1080`. When DaMail runs in Docker, `127.0.0.1` is the container itself. To reach a proxy on the host, use the host's LAN address |
+| Username and password | Only if the proxy needs authentication. The password is stored encrypted; leave it blank when editing to keep it |
+| Test target | **Test connection** connects to this address through the proxy. The default is `imap.gmail.com:993`; change it to the server you need |
 
-3. 先点「测试连接」，成功后保存
+3. Click **Test connection**, then save once it succeeds
 
-修改或删除代理后，使用它的邮箱会自动重新连接；删除后这些邮箱改为直连。
+Accounts that use a proxy reconnect automatically after you edit it. If you delete a proxy, those accounts switch to a direct connection.
 
-## 在哪里选用
+## Where to use it
 
-| 用途 | 在哪里选 | 经代理的连接 |
+| Use | Where to select it | What goes through the proxy |
 |---|---|---|
-| 邮箱收发 | 编辑邮箱 →「代理选择」 | IMAP 收信、SMTP 发信、Microsoft Graph、OAuth 刷新令牌 |
-| Gmail / Microsoft 授权 | 「设置 → 授权应用」→「代理选择」 | 授权时向 Google / Microsoft 换取令牌；新授权的邮箱默认沿用这个代理 |
-| AI 客户端登录授权 | 「设置 → OAuth 设置」→「代理选择」 | 读取 ChatGPT 等客户端的元数据文档和公钥；只会访问客户端 Client ID 所在的网站 |
-| 检查新版本 | 环境变量 `UPDATE_CHECK_PROXY_ID` | 访问 `api.github.com` 读取最新版本 |
+| Sending and receiving mail | Edit mailbox → **Proxy** | IMAP, SMTP, Microsoft Graph and OAuth token refresh |
+| Gmail / Microsoft authorization | **Settings → OAuth apps** → **Proxy** | Token exchange with Google or Microsoft during authorization. New mailboxes authorized this way use the same proxy by default |
+| AI client sign-in | **Settings → OAuth settings** → **Proxy** | Fetching client metadata documents and keys for clients such as ChatGPT. Only the site of the client ID is accessed |
+| Update checks | The `UPDATE_CHECK_PROXY_ID` environment variable | Reading the latest release from `api.github.com` |
 
-:::note[哪些连接不走代理]
-- **AI 模型接口**：调用 Claude、OpenAI 兼容接口时直连。服务器访问不了时，在[模型配置](/docs/ai/models/)里填国内可直连的服务或中转地址
-- **通知推送**：Bark、企业微信、钉钉、飞书、Telegram、Webhook 直连
-- **别人访问 DaMail**：网页、MCP、REST API 是别人连进来，和代理无关。AI 助手要从公网访问 DaMail，需要公网 HTTPS 地址，见[接入 AI 助手](/docs/assistants/#服务器放在哪里)
+:::note[What doesn't use the proxy]
+- **AI model APIs:** calls to Claude or OpenAI-compatible APIs go out directly. If the server can't reach them, use a provider or relay it can reach in [Models](/docs/ai/models/)
+- **Notifications:** Bark, WeCom, DingTalk, Feishu, Telegram and webhooks connect directly
+- **Incoming traffic:** the web app, MCP and REST API are reached by others, so the proxy doesn't apply. AI assistants need a public HTTPS address for DaMail; see [AI assistants](/docs/assistants/#where-to-run-the-server)
 :::
 
-## 常见问题
+## Troubleshooting
 
-**测试连接提示代理拒绝连接**：检查代理地址和端口；Docker 部署时不要填 `127.0.0.1`，改填宿主机地址，或把代理也放进同一个 Docker 网络用服务名访问。
+**The test says the proxy refused the connection.** Check the host and port. In Docker, don't use `127.0.0.1`. Use the host's address, or run the proxy in the same Docker network and use its service name.
 
-**测试成功，但邮箱还是连不上**：确认编辑邮箱时选了这个代理并已保存；用 Gmail OAuth 授权的邮箱，「授权应用」里也要选代理，否则授权和刷新令牌会失败。
+**The test passes but the mailbox still can't connect.** Make sure the proxy is selected and saved in the mailbox settings. For Gmail accounts authorized with OAuth, also select the proxy under **OAuth apps**, or authorization and token refresh will fail.

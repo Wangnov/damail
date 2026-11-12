@@ -1,23 +1,23 @@
 ---
-title: 邮件翻译
-description: 一键把外文邮件翻译成你的语言，保留排版，译文会保存下来
+title: Translation
+description: Translate foreign-language mail in one click, layout intact, with the translation saved
 ---
 
-收到外文邮件时，点邮件详情工具栏里的**翻译**，正文会被翻译成你设置的目标语言。
+When an email arrives in another language, click **Translate** in the message toolbar and the body is translated into your target language.
 
-## 特点
+## Highlights
 
-- **保留排版**：HTML 邮件只翻译其中的文字片段，再放回原来的位置，表格、链接和图片都不变
-- **译文会保存**：下次打开直接显示译文，不会重复调用模型；可以随时切回原文
-- **长邮件**：纯文本正文超过 1.2 万字时只翻译前面的部分，并在末尾注明；HTML 邮件的文字超过约 4 万字时，后面的片段保留原文
+- **Layout intact**: for HTML mail only the text fragments are translated and put back in place, so tables, links and images stay as they are
+- **Saved translations**: the next time you open the email the translation shows right away, with no new model call; you can switch back to the original any time
+- **Long mail**: plain-text bodies over 12,000 characters are translated up to that point with a note at the end; for HTML mail with more than about 40,000 characters of text, the rest stays in the original language
 
-## 设置
+## Settings
 
-在 **智能 → 模型配置** 的「邮件翻译」里：
+Under **Translation** in **AI → Models**:
 
-| 设置 | 说明 |
+| Setting | Description |
 |---|---|
-| 渠道和模型 | 默认跟随默认模型，可以单独选一个更便宜或翻译更好的模型 |
-| 翻译成 | 目标语言，新装时按系统语言设置；可以选择或直接输入语言名，如「繁體中文」「日本語」 |
+| Channel and model | Follows the default model unless you pick a cheaper or better translator |
+| Translate to | Target language, set from the system language on first install; pick one or type any language name, such as "Deutsch" or "日本語" |
 
-翻译需要先启用 AI。费用记在[用量](/docs/ai/usage/)的「邮件翻译」下。
+Translation requires AI to be enabled. Costs show up as "Translation" in [Usage](/docs/ai/usage/).

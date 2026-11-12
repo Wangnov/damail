@@ -1,0 +1,14 @@
+---
+// 品牌 logo：src/assets/brands/*.svg（来源和许可见同目录 README.md）
+const SVGS = import.meta.glob<string>('../assets/brands/*.svg', { query: '?raw', import: 'default', eager: true });
+
+interface Props {
+  logo: string;
+  size?: number;
+}
+const { logo, size = 18 } = Astro.props;
+const svg = SVGS[`../assets/brands/${logo}.svg`];
+if (!svg) throw new Error(`Unknown brand logo: ${logo}`);
+---
+
+<span class="brand-logo" style={`--brand-size:${size}px`} set:html={svg} />

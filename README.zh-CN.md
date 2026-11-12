@@ -16,7 +16,7 @@
 [![Docker image](https://img.shields.io/badge/ghcr.io-gopkg--dev%2Fdamail-2496ED?logo=docker&logoColor=white)](https://github.com/gopkg-dev/damail/pkgs/container/damail)
 [![License: MIT](https://img.shields.io/github/license/gopkg-dev/damail?color=green)](LICENSE)
 
-[官网](https://damail.app/) · [文档](https://damail.app/docs/) · [更新日志](https://github.com/gopkg-dev/damail/releases) · [English](README.md)
+[官网](https://damail.app/zh/) · [文档](https://damail.app/zh/docs/) · [更新日志](https://github.com/gopkg-dev/damail/releases) · [English](README.md)
 
 </div>
 
@@ -57,7 +57,7 @@ curl -fsSL https://damail.app/install.sh | DAMAIL_PUBLIC_URL=https://mail.exampl
 
 **务必备份 `damail/.env`**，里面的 `MASTER_KEY` 用来加密邮箱凭证。以后升级只需再运行一次安装命令：`.env` 不会被改动，数据库迁移在启动时自动完成。
 
-安装选项、用 Docker Compose 手动安装、HTTPS 和反向代理见[快速开始](https://damail.app/docs/quick-start/)。
+安装选项、用 Docker Compose 手动安装、HTTPS 和反向代理见[快速开始](https://damail.app/zh/docs/quick-start/)。
 
 ## 接入 AI Agent
 
@@ -86,24 +86,24 @@ claude mcp add --transport http damail https://mail.example.com/mcp \
 }
 ```
 
-**ChatGPT** 通过 OAuth 接入：把 `https://mail.example.com/mcp` 添加为自定义连接器，登录 DaMail 后在授权页选择权限和邮箱。详见 [ChatGPT 与 OAuth](https://damail.app/docs/oauth/)。
+**ChatGPT** 通过 OAuth 接入：把 `https://mail.example.com/mcp` 添加为自定义连接器，登录 DaMail 后在授权页选择权限和邮箱。详见 [ChatGPT 与 OAuth](https://damail.app/zh/docs/oauth/)。
 
-**AI 助手**：**Claude Duet**、**ChatGPT dots**、**Grok Bot**、**Meta Muse** 等主动型助手也是同样的方式，在它们的自定义连接器里用 OAuth 接入。接上之后，它们可以给你做新邮件简报、提醒需要回复的邮件，并起草回复等你审批。各助手的步骤见[接入 AI 助手](https://damail.app/docs/assistants/)。
+**AI 助手**：**Claude Duet**、**ChatGPT dots**、**Grok Bot**、**Meta Muse** 等主动型助手也是同样的方式，在它们的自定义连接器里用 OAuth 接入。接上之后，它们可以给你做新邮件简报、提醒需要回复的邮件，并起草回复等你审批。各助手的步骤见[接入 AI 助手](https://damail.app/zh/docs/assistants/)。
 
 Agent 看不到它无权使用的工具；没有 `send` 权限时，它写的邮件会进入「草稿 → 待审批」。
 
 ## 文档
 
-完整文档（中文 / English）在 **[damail.app](https://damail.app/docs/)**。
+完整文档（中文 / English）在 **[damail.app](https://damail.app/zh/docs/)**。
 
 | 分类 | 页面 |
 |---|---|
-| 开始 | [介绍](https://damail.app/docs/) · [快速开始](https://damail.app/docs/quick-start/) · [配置](https://damail.app/docs/configuration/) · [代理设置](https://damail.app/docs/proxies/) · [升级](https://damail.app/docs/upgrade/) |
-| 使用 | [接入邮箱](https://damail.app/docs/mailboxes/) · [收发邮件](https://damail.app/docs/mail/) · [订阅管理](https://damail.app/docs/subscriptions/) · [搜索语法](https://damail.app/docs/search/) |
-| AI 功能 | [模型配置](https://damail.app/docs/ai/models/) · [邮件分析](https://damail.app/docs/ai/analysis/) · [分类与标签](https://damail.app/docs/ai/labels/) · [AI 搜索](https://damail.app/docs/ai/search/) · [AI 助手](https://damail.app/docs/ai/assistant/) · [邮件翻译](https://damail.app/docs/ai/translate/) · [用量与费用](https://damail.app/docs/ai/usage/) |
-| 自动化 | [收信规则](https://damail.app/docs/automation/rules/) · [通知渠道](https://damail.app/docs/automation/notifications/) · [日报周报与统计](https://damail.app/docs/automation/reports/) · [等回复与跟进提醒](https://damail.app/docs/automation/follow-ups/) |
-| 接入 AI Agent | [接入 AI 助手](https://damail.app/docs/assistants/) · [MCP](https://damail.app/docs/mcp/) · [ChatGPT 与 OAuth](https://damail.app/docs/oauth/) · [REST API](https://damail.app/docs/rest-api/) |
-| 参与开发 | [本地开发](https://damail.app/docs/development/) · [发布版本](https://damail.app/docs/releasing/) |
+| 开始 | [介绍](https://damail.app/zh/docs/) · [快速开始](https://damail.app/zh/docs/quick-start/) · [配置](https://damail.app/zh/docs/configuration/) · [代理设置](https://damail.app/zh/docs/proxies/) · [升级](https://damail.app/zh/docs/upgrade/) |
+| 使用 | [接入邮箱](https://damail.app/zh/docs/mailboxes/) · [收发邮件](https://damail.app/zh/docs/mail/) · [订阅管理](https://damail.app/zh/docs/subscriptions/) · [搜索语法](https://damail.app/zh/docs/search/) |
+| AI 功能 | [模型配置](https://damail.app/zh/docs/ai/models/) · [邮件分析](https://damail.app/zh/docs/ai/analysis/) · [分类与标签](https://damail.app/zh/docs/ai/labels/) · [AI 搜索](https://damail.app/zh/docs/ai/search/) · [AI 助手](https://damail.app/zh/docs/ai/assistant/) · [邮件翻译](https://damail.app/zh/docs/ai/translate/) · [用量与费用](https://damail.app/zh/docs/ai/usage/) |
+| 自动化 | [收信规则](https://damail.app/zh/docs/automation/rules/) · [通知渠道](https://damail.app/zh/docs/automation/notifications/) · [日报周报与统计](https://damail.app/zh/docs/automation/reports/) · [等回复与跟进提醒](https://damail.app/zh/docs/automation/follow-ups/) |
+| 接入 AI Agent | [接入 AI 助手](https://damail.app/zh/docs/assistants/) · [MCP](https://damail.app/zh/docs/mcp/) · [ChatGPT 与 OAuth](https://damail.app/zh/docs/oauth/) · [REST API](https://damail.app/zh/docs/rest-api/) |
+| 参与开发 | [本地开发](https://damail.app/zh/docs/development/) · [发布版本](https://damail.app/zh/docs/releasing/) |
 
 ## 工作原理
 
@@ -156,7 +156,7 @@ pnpm typecheck   # 服务端和网页的类型检查
 pnpm test        # 服务端测试，使用独立的 damail_test 数据库
 ```
 
-GreenMail 容器提供本地测试邮箱，开发全程不需要真实邮箱。项目结构和测试数据见[本地开发](https://damail.app/docs/development/)。
+GreenMail 容器提供本地测试邮箱，开发全程不需要真实邮箱。项目结构和测试数据见[本地开发](https://damail.app/zh/docs/development/)。
 
 ## 参与贡献
 

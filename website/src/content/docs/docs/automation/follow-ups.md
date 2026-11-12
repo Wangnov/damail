@@ -1,26 +1,26 @@
 ---
-title: 等回复与跟进提醒
-description: 自动列出在等对方回复的邮件；给发出的邮件设提醒，到点没回就推送
+title: Awaiting reply & follow-ups
+description: See which sent mail is still waiting for an answer, and get reminded when there's no reply
 ---
 
-## 等回复
+## Awaiting reply
 
-邮件侧栏的「**等回复**」列出你发出后还在等对方回答的会话，显示等了多久、对方平时多久回你。
+**Awaiting reply** in the mail sidebar lists threads where you sent the last message and are waiting for an answer, with how long you've waited and how quickly that person usually replies.
 
-判断规则（全部按邮件头计算，不调用模型）：
+How it decides (from headers only, no model calls):
 
-- 会话最后一封是你发的，并且是你主动发起的对话，或者信里在提问、请对方做事；只回一句「收到」不算
-- 等待时间超过 48 小时，或者超过对方平时回复用时（中位数）的 3 倍，取较长的那个，最多一周
-- 发给机器发信地址和职能邮箱（如 `noreply@`）的不算
-- 太久以前发出的邮件不再列出（设了跟进提醒的除外）
+- The last message in the thread is yours, and you started the conversation or asked a question or for something — a quick "thanks, got it" doesn't count
+- You've waited more than 48 hours or 3× the person's usual reply time (median), whichever is longer, capped at one week
+- Mail to automated and role addresses (like `noreply@`) is ignored
+- Mail sent long ago drops off the list (unless it has a follow-up reminder)
 
-对方回信后自动从列表里消失。确定不用等了，点「**不用等回复了**」手动移出。
+Threads leave the list automatically when the other side replies. If you don't need to wait anymore, click **Stop waiting for a reply**.
 
-## 跟进提醒
+## Follow-up reminders
 
-写信时，在发送按钮旁选择「**没回复提醒**」：1 天、3 天、1 周、2 周，或者自定义时间。也可以在已发送的邮件上设置。
+When writing, pick **Remind if no reply** next to the send button: 1 day, 3 days, 1 week, 2 weeks or a custom time. You can also set one on mail you've already sent.
 
-- 到点时还没收到对方的回复，推送到订阅了「跟进提醒」`followup.due` 事件的[通知渠道](/docs/automation/notifications/)
-- 收到回复后提醒自动结束（按回信的 `In-Reply-To` / `References` 判断，你自己其他邮箱发的不算回复）
-- 到期的提醒会在侧栏「等回复」上显示数量
-- 可以随时改时间、取消提醒或标为完成
+- If there's still no reply when it's due, a notification goes to channels subscribed to `followup.due` — see [Notification channels](/docs/automation/notifications/)
+- A reply ends the reminder automatically (matched by the reply's `In-Reply-To` / `References`; mail from your own other mailboxes doesn't count)
+- Due reminders show as a count on **Awaiting reply** in the sidebar
+- Change the time, cancel the reminder or mark it done at any time

@@ -1,58 +1,58 @@
 ---
-title: 邮件分析
-description: 新邮件自动分类、判断优先级、写摘要并提取验证码、账单和待办
+title: Mail analysis
+description: Categorize new mail, set priority, summarize and extract codes, bills and to-dos automatically
 ---
 
-开启后，每封新邮件进入收件箱时，AI 会读一遍并给出结构化的结果。收件箱的标签、「重要」「等回复」视图、收信规则里的 AI 条件、日报周报和 AI 助手都基于这些结果。
+When analysis is on, AI reads every new message that reaches your inbox and produces structured results. Inbox tags, the Important and Awaiting reply views, AI conditions in inbox rules, reports and the AI assistant all build on them.
 
-入口：**智能 → 邮件分析**。邮件分析使用[模型配置](/docs/ai/models/)里的**默认模型**，需要先配置好模型并启用 AI。
+Go to **AI → Mail analysis**. Analysis uses the **default model** from [Models](/docs/ai/models/), so set that up and enable AI first.
 
-## 分析结果
+## What you get
 
-| 项目 | 说明 |
+| Result | Description |
 |---|---|
-| 分类 | 重要、工作、个人、账单财务、验证码、物流、系统通知、社交、营销推广、垃圾，每封邮件归到其中一类 |
-| 标签 | 你在[分类与标签](/docs/ai/labels/)里采用或创建的标签，一封邮件可以有多个 |
-| 优先级 | 高 / 普通 / 低；高优先级的邮件出现在「重要」视图里 |
-| 是否需要回复 | 判断为需要回复的出现在「待回复」筛选里 |
-| 摘要 | 一句话说明这封邮件讲了什么、要你做什么 |
-| 提取信息 | 验证码、金额、截止日期、物流单号、待办事项 |
+| Category | Important, work, personal, finance, verification, shipping, notification, social, marketing or spam — every message gets one |
+| Labels | Labels you accepted or created under [Categories & labels](/docs/ai/labels/); a message can have several |
+| Priority | High / normal / low; high-priority mail shows up in **Important** |
+| Needs reply | Messages that need a reply show up under the needs-reply filter |
+| Summary | One sentence on what the message is about and what you need to do |
+| Extracted info | Verification codes, amounts, due dates, tracking numbers, to-dos |
 
-在哪里看：
+Where to see it:
 
-- **邮件列表**：每封邮件右侧显示分类标签，点击查看同类邮件
-- **邮件详情**：顶部的「AI 摘要」卡片，包含摘要、提取的信息和生成它的模型
-- **搜索**：`category:finance`、`priority:high`、`is:needs-reply`、`has:code` 等语法直接用分析结果筛选，见[搜索语法](/docs/search/)
+- **Message list**: a category tag on each message; click it to see similar mail
+- **Message view**: the **AI summary** card at the top, with the summary, extracted details and the model that produced it
+- **Search**: syntax such as `category:finance`, `priority:high`, `is:needs-reply` and `has:code` filters on analysis results — see [Search syntax](/docs/search/)
 
-## 设置
+## Settings
 
-| 设置 | 说明 |
+| Setting | Description |
 |---|---|
-| 分析新邮件 | 总开关。关闭后新邮件不再送给 AI，已有结果保留 |
-| 分析范围 | 只分析所选邮箱收到的新邮件，默认全部邮箱 |
-| 忽略的发件人 | 这些发件人的来信不送给 AI，也不算进日报和概览。在 **通讯录** 里管理，支持整个域名 |
-| 分析模型 | 使用默认模型，在模型配置里修改 |
+| Analyze new mail | Master switch. Turning it off stops sending new mail to AI; existing results stay |
+| Scope | Only analyze new mail in the selected mailboxes (all by default) |
+| Ignored senders | Mail from these senders is never sent to AI and is left out of reports and the overview. Managed in **Contacts**, whole domains supported |
+| Model | Uses the default model; change it under Models |
 
-## 什么时候会分析
+## When analysis runs
 
-只有**收件箱里新到的邮件**（邮件日期在 3 天内）会自动分析。下面这些情况**不会**触发，避免一次性消耗大量额度：
+Only **new mail arriving in the inbox** (dated within the last 3 days) is analyzed automatically. These do **not** trigger it, so you don't burn through credits at once:
 
-- 添加邮箱后的首次回溯同步
-- 文件夹重建、重新同步
-- 把旧邮件移回收件箱
+- The initial backfill after adding a mailbox
+- Folder rebuilds and resyncs
+- Moving old mail back to the inbox
 
-分析完成后才会执行[收信规则](/docs/automation/rules/)和[通知](/docs/automation/notifications/)，所以规则可以使用 AI 的判断结果。
+[Inbox rules](/docs/automation/rules/) and [notifications](/docs/automation/notifications/) run after analysis finishes, so rules can use the AI results.
 
-## 补做历史邮件
+## Analyze past mail
 
-启用分析之前收到的邮件不会自动分析。在「补做历史邮件」里选择数量后点「开始分析」：
+Mail received before you turned analysis on is not analyzed automatically. Under **Analyze past mail**, choose how many and click **Start**:
 
-- 从新到旧处理，进度显示在页面上方
-- **只打标签和写摘要，不执行收信规则，也不推送通知**
-- 已经分析过的邮件会跳过
+- Processes newest first, with progress shown at the top of the page
+- **Only adds labels and summaries — no inbox rules, no notifications**
+- Already analyzed mail is skipped
 
-## 调整分类效果
+## Tuning
 
-- 分类是系统内置的，不能修改；更细的区分用[标签](/docs/ai/labels/)
-- 发给模型的提示词可以在 **智能 → 提示词** 查看
-- 营销邮件太多时，可以配合收信规则自动归档，或者在[订阅管理](/docs/subscriptions/)里直接退订
+- Categories are built in and can't be changed; use [labels](/docs/ai/labels/) for finer distinctions
+- Read the prompts sent to the model under **AI → Prompts**
+- Too much marketing? Archive it with an inbox rule, or unsubscribe in [Subscriptions](/docs/subscriptions/)

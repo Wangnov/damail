@@ -1,4 +1,4 @@
-# 发布：推送 v* 标签后自动运行（标签由 pnpm release 创建，见 https://damail.app/docs/releasing/）
+# 发布：推送 v* 标签后自动运行（标签由 pnpm release 创建，见 https://damail.app/zh/docs/releasing/）
 #   1. 检查：类型检查 + 服务端测试，失败就不发布
 #   2. 构建 Docker 镜像（linux/amd64 + linux/arm64）推到 GHCR：ghcr.io/<owner>/damail:v0.2.0、0.2.0、0.2、latest
 #   3. 用标签附注创建 GitHub Release，部署好的 DaMail 据此提示「有新版本」

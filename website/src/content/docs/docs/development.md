@@ -1,58 +1,58 @@
 ---
-title: 本地开发
-description: 搭建开发环境、项目结构和测试
+title: Development
+description: Set up a dev environment, project layout and tests
 ---
 
-## 环境
+## Setup
 
-需要 Node 22+、pnpm 和 Docker。
+You need Node 22+, pnpm and Docker.
 
 ```bash
 git clone https://github.com/gopkg-dev/damail.git && cd damail
 cp .env.example .env
-docker compose -f docker-compose.dev.yml -p damail-dev up -d   # PostgreSQL + GreenMail 测试邮箱
+docker compose -f docker-compose.dev.yml -p damail-dev up -d   # PostgreSQL + GreenMail test mail server
 pnpm install
-pnpm dev                                                         # 后端 :8787，前端 :5180
+pnpm dev                                                         # server :8787, web :5180
 ```
 
-打开 http://localhost:5180，第一次访问时创建管理员账号。
+Open http://localhost:5180 and create the admin account on first visit.
 
-## 用测试邮箱体验
+## Try it with test mailboxes
 
-GreenMail 预置了 `alice` / `alice-pass`、`bob` / `bob-pass` 两个账号。添加邮箱时服务商选「其他 IMAP」，服务器填 `127.0.0.1`，端口 `3143`，关闭 SSL。投递一批测试邮件：
+GreenMail comes with `alice` / `alice-pass` and `bob` / `bob-pass`. Add a mailbox with provider “Other IMAP”, server `127.0.0.1`, port `3143`, SSL off. Deliver a batch of sample mail:
 
 ```bash
 pnpm --filter server exec tsx scripts/seed-greenmail.ts alice@local.test
 ```
 
-## 检查
+## Checks
 
 ```bash
-pnpm typecheck   # 服务端和前端的类型检查
-pnpm test        # 服务端集成测试，使用独立的 damail_test 数据库
+pnpm typecheck   # server and web type checks
+pnpm test        # server integration tests against a separate damail_test database
 ```
 
-测试只访问本机数据库，不连真实邮箱、不访问外网、不发信。
+Tests only touch the local database — no real mailboxes, no internet, no sending.
 
-## 项目结构
+## Project layout
 
 ```txt
 server/                 Hono + Drizzle + imapflow
-  src/sync/             同步引擎：IDLE、增量、标记、删除检测、服务商预设
-  src/services/         入库与会话归并、查询、整理回写、草稿与审批、发信、
-                        任务队列、AI 分析、规则、通知、报告
-  src/api/              网页后台和 REST API
-  src/mcp/              MCP 服务器（无状态 Streamable HTTP）
-  src/oauth/            MCP OAuth 授权服务器
-  drizzle/              数据库迁移
-  test/                 集成测试
+  src/sync/             Sync engine: IDLE, incremental sync, flags, deletion detection, provider presets
+  src/services/         Ingest and threading, queries, write-back, drafts and approval, sending,
+                        job queue, AI analysis, rules, notifications, reports
+  src/api/              Web admin and REST API
+  src/mcp/              MCP server (stateless Streamable HTTP)
+  src/oauth/            MCP OAuth authorization server
+  drizzle/              Database migrations
+  test/                 Integration tests
 web/                    React + Ant Design + TanStack Query
-website/                官网和文档（Astro + Starlight）
+website/                Website and docs (Astro + Starlight)
 ```
 
-## 官网
+## Website
 
-官网是独立的 pnpm 工作区：
+The website is a separate pnpm workspace:
 
 ```bash
 cd website
@@ -60,8 +60,8 @@ pnpm install
 pnpm dev        # http://localhost:4321/
 ```
 
-首页在 `website/src/pages`，文档在 `website/src/content/docs`（中文在根目录，英文在 `en/`）。推送到 `main` 后由 GitHub Actions 部署到 GitHub Pages。
+The home page lives in `website/src/pages` and the docs in `website/src/content/docs` (Chinese at the root, English under `en/`). Pushing to `main` deploys it to GitHub Pages through GitHub Actions.
 
-## 提交规范
+## Commit messages
 
-提交信息使用 [Conventional Commits](https://www.conventionalcommits.org/)：`type(scope): summary`，例如 `feat(mail): add unread filter to thread list`、`fix(sync): reconnect after IDLE timeout`。
+Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): summary`, for example `feat(mail): add unread filter to thread list` or `fix(sync): reconnect after IDLE timeout`.

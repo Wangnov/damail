@@ -1,11 +1,11 @@
-// DaMail 官网：首页是自己写的 src/pages（index.astro 中文、en/index.astro 英文），文档用 Starlight（src/content/docs）。
+// DaMail 官网：首页是自己写的 src/pages（index.astro 英文、zh/index.astro 中文），文档用 Starlight（src/content/docs，英文在根目录，中文在 zh/）。
 // 部署到 GitHub Pages，自定义域名 https://damail.app/（public/CNAME；见 .github/workflows/pages.yml）
 import starlight from '@astrojs/starlight';
 import { defineConfig } from 'astro/config';
 
 const REPO = 'https://github.com/gopkg-dev/damail';
 
-const group = (zh, en, items) => ({ label: zh, translations: { en }, items });
+const group = (zh, en, items) => ({ label: en, translations: { 'zh-CN': zh }, items });
 
 export default defineConfig({
   site: 'https://damail.app',
@@ -14,13 +14,13 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'DaMail',
-      description: '自托管的多邮箱聚合服务，通过 MCP 和 REST API 安全地交给 AI Agent 使用',
+      description: 'Self-hosted mail hub that gives AI agents safe access to your mail through MCP and a REST API',
       logo: { src: './src/assets/logo.svg', alt: 'DaMail' },
       favicon: '/favicon.svg',
       defaultLocale: 'root',
       locales: {
-        root: { label: '简体中文', lang: 'zh-CN' },
-        en: { label: 'English', lang: 'en' },
+        root: { label: 'English', lang: 'en' },
+        zh: { label: '简体中文', lang: 'zh-CN' },
       },
       social: [{ icon: 'github', label: 'GitHub', href: REPO }],
       editLink: { baseUrl: `${REPO}/edit/main/website/` },

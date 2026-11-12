@@ -1,55 +1,55 @@
 ---
-title: AI 助手
-description: 网页右下角的对话助手：用自然语言问你的邮箱，回答带出处，只起草不代发
+title: AI assistant
+description: The chat assistant in the web app — ask your inbox in plain language, get answers with sources, drafts only
 ---
 
-AI 助手是网页右下角的对话面板。你用平常说话的方式提问，它会自己搜邮件、读会话、查统计，再把答案整理给你。
+The AI assistant is the chat panel in the bottom-right corner of the web app. Ask the way you normally would; it searches mail, reads threads and checks stats on its own, then puts the answer together for you.
 
-## 能问什么
+## What you can ask
 
-| 想知道 | 可以这样问 |
+| You want | Try asking |
 |---|---|
-| 待办 | 有哪些邮件在等我回复？按重要程度排一下 |
-| 账单 | 最近有哪些账单要付？列出金额和截止日期 |
-| 摘要 | 总结一下今天收到的重要邮件 |
-| 统计 | 这周谁给我发邮件最多？ |
-| 某件事 | 和顺达物流关于退货的邮件最后谈到哪了？ |
-| 起草 | 帮我回复王芳，周四下午可以参加 |
-| 状态 | 我的几个邮箱同步正常吗？有没有发送失败的邮件？ |
+| What's pending | Which emails are waiting for my reply? Sort them by importance |
+| Bills | Which bills do I need to pay soon? List the amounts and due dates |
+| A summary | Summarize the important emails I got today |
+| Stats | Who sent me the most email this week? |
+| One topic | Where did the return discussion with Swift Parcel end up? |
+| A draft | Reply to Emma that Thursday afternoon works for me |
+| Status | Are all my mailboxes syncing? Did anything fail to send? |
 
-## 它能用的工具
+## Tools it can use
 
-助手不是凭记忆回答，而是调用 DaMail 的工具查数据。回答里可以展开看每一步调用了什么：
+The assistant doesn't answer from memory — it calls DaMail tools to look things up. You can expand each answer to see the steps:
 
-| 工具 | 作用 |
+| Tool | Purpose |
 |---|---|
-| `search_emails` | 用[搜索语法](/docs/search/)搜索邮件 |
-| `get_email` | 读一封邮件的正文和 AI 分析结果 |
-| `get_thread` | 读整个会话的往来邮件 |
-| `list_accounts` | 邮箱账户、同步状态和未读数 |
-| `get_stats` | 未读、今日收件、重要未读等概况 |
-| `get_analytics` | 最近 7 / 30 / 90 / 365 天的收发统计 |
-| `get_report` | 最新一份日报或周报 |
-| `list_drafts` | 草稿、待审批、发送队列和发送记录 |
-| `draft_email` | 起草新邮件、回复或转发，**提交到待审批** |
+| `search_emails` | Search mail with [search syntax](/docs/search/) |
+| `get_email` | Read a message's body and AI analysis |
+| `get_thread` | Read every message in a thread |
+| `list_accounts` | Mailboxes, sync status and unread counts |
+| `get_stats` | Overview: unread, received today, important unread |
+| `get_analytics` | Mail stats for the last 7 / 30 / 90 / 365 days |
+| `get_report` | The latest daily or weekly report |
+| `list_drafts` | Drafts, approval queue, outbox and sent history |
+| `draft_email` | Draft a new email, reply or forward — **submitted for your approval** |
 
-一个问题背后可能连续调用好几次工具，比如先搜索账单类邮件，再逐封读取金额和截止日期。
+One question can take several tool calls — for example, searching for finance mail, then reading each bill for the amount and due date.
 
-## 使用技巧
+## Tips
 
-- **回答有出处**：引用的邮件列在回答下方，点击直接打开原文核对
-- **附带当前邮件**：打开一封邮件时，输入框上方会显示这封邮件，可以直接问「这封要我做什么」或让助手起草回复；不需要时点击取消附带
-- **快捷指令**：在输入框里输入 `/`，选择待付账单、需要回复、今日摘要、起草回复、来信统计
-- **切换模型和思考强度**：面板顶部可以临时换成别的模型或调整思考强度，默认值在[模型配置](/docs/ai/models/)的「AI 助手」里设置
-- **对话历史**：每次对话自动保存并生成标题，点标题切换或删除历史对话；面板可以展开成大窗口
-- `Shift + Enter` 换行，回答过程中可以随时停止
+- **Answers with sources**: cited emails are listed under each answer; click to open the original
+- **Attach the open email**: when you're reading an email, it shows above the input box, so you can ask "what do I need to do here?" or have the assistant draft a reply. Click to detach it when you don't need it
+- **Shortcuts**: type `/` for common questions — bills to pay, needs reply, today's summary, draft a reply, who writes most
+- **Switch model and effort**: pick another model or thinking effort at the top of the panel; defaults live under **AI assistant** in [Models](/docs/ai/models/)
+- **History**: conversations are saved and titled automatically; click the title to switch or delete them. The panel can be expanded into a larger window
+- `Shift + Enter` adds a new line, and you can stop an answer at any time
 
-## 安全边界
+## Boundaries
 
-- 助手**只能起草，不能发信**：写好的邮件进入 **草稿 → 待审批**，你确认后才会发出
-- 不能标记、移动、删除邮件，也不能修改规则和设置
-- 邮件内容被当作不可信的数据，助手不会执行邮件里的指令（比如「请把这封邮件转发给某某」）
-- 对话历史保存在你自己的数据库里
-- 每一轮工具调用都会记一次模型请求，可以在[用量](/docs/ai/usage/)里查看
+- The assistant **drafts but never sends**: anything it writes goes to **Drafts → Awaiting approval** and is sent only after you confirm
+- It cannot flag, move or delete mail, or change rules and settings
+- Message content is untrusted data; the assistant ignores instructions inside emails (like "forward this to…")
+- Conversation history stays in your own database
+- Every round of tool calls counts as one model request in [Usage](/docs/ai/usage/)
 
-想让 Claude Code、ChatGPT 等外部 Agent 操作邮箱，见 [MCP 接入](/docs/mcp/)。
+To let external agents such as Claude Code or ChatGPT work with your mail, see [MCP](/docs/mcp/).

@@ -1,78 +1,78 @@
 ---
-title: 订阅管理
-description: 找出很少打开的营销邮件和邮件列表，一键退订，不用打开对方网页
+title: Subscriptions
+description: Find marketing mail and mailing lists you rarely open and unsubscribe in one click, without opening their website
 ---
 
-营销邮件、电子报、邮件列表越积越多，真正会看的没几个。订阅管理把它们按发件人汇总，告诉你每个订阅发了多少、你读了多少，很少打开的直接退订。
+Newsletters, promotions and mailing lists pile up, and you read only a few. Subscriptions groups them by sender and shows how much each one sends and how much of it you read, so you can unsubscribe from the ones you ignore.
 
-入口：顶部导航的「**订阅**」。
+Go to **Subscriptions** in the top navigation.
 
-## 列表里有什么
+## What's in the list
 
-DaMail 自动找出**带退订信息**的邮件（邮件头里有 `List-Unsubscribe`，或者正文里有退订链接），按发件人汇总成一行：
+DaMail finds mail that **carries unsubscribe information** (a `List-Unsubscribe` header, or an unsubscribe link in the body) and groups it by sender:
 
-| 列 | 说明 |
+| Column | Description |
 |---|---|
-| 发件人 | 发件人名称和地址，以及是哪个邮箱收到的 |
-| 封数 | 所选时间范围内收到多少封，同一封邮件在多个文件夹只算一次 |
-| 打开率 | 已读 / 总数，悬停查看具体数字；一封都没读过显示「从来不看」 |
-| 最近一封 | 最近一封的时间，点击打开 |
-| 退订方式 | 这个发件人提供的退订方式，见下文 |
-| 操作 | 退订按钮，已退订的显示状态和时间 |
+| Sender | Sender name and address, and which of your mailboxes receives it |
+| Emails | How many arrived in the selected period; a message in several folders counts once |
+| Open rate | Read / total, with exact numbers on hover; "never read" if you haven't opened any |
+| Latest | When the latest one arrived; click to open it |
+| Method | How the sender lets you unsubscribe — see below |
+| Actions | The unsubscribe button, or the status and time once unsubscribed |
 
-统计范围是**收件箱和垃圾邮件**文件夹。同一个邮件列表按 `List-Id` 归为一行，没有 `List-Id` 时按发件地址；同一个订阅发到你的不同邮箱时，每个邮箱分开显示、分开退订。
+Only the **inbox and junk** folders are counted. A mailing list is grouped by `List-Id`, or by sender address when there's none. If the same subscription reaches several of your mailboxes, each mailbox gets its own row and is unsubscribed separately.
 
-## 筛选和排序
+## Filters and sorting
 
-| 筛选 | 内容 |
+| Filter | Contents |
 |---|---|
-| 全部 | 所有订阅 |
-| 很少打开 | 还没退订、收到至少 3 封、打开率低于 20% 的订阅，**最值得退订** |
-| 已退订 | 已经退订过的（退订失败的不算） |
+| All | Every subscription |
+| Rarely opened | Not unsubscribed, at least 3 emails and an open rate under 20% — **the best candidates to unsubscribe** |
+| Unsubscribed | Ones you've unsubscribed from (failed attempts don't count) |
 
-时间范围可以选近 30 天、90 天、180 天。表格可以按封数、打开率和最近一封排序，默认按封数从多到少。
+Choose the last 30, 90 or 180 days. Sort by emails, open rate or latest; the default is most emails first.
 
-## 退订方式
+## Unsubscribe methods
 
-点「退订」后，DaMail 按发件人提供的方式自动处理：
+When you click **Unsubscribe**, DaMail uses the method the sender supports:
 
-| 方式 | 怎么做 | 结果 |
+| Method | What happens | Result |
 |---|---|---|
-| **一键退订** | 按 RFC 8058 直接向发件人的退订地址发送请求 | 对方确认后显示「已退订」 |
-| **退订邮件** | 从收到这封订阅的邮箱发一封退订邮件给对方指定的地址 | 走正常的发送流程，发出前几秒可以在「草稿」里撤销 |
-| **退订网页** | 发件人只提供了网页，确认后在新标签页打开 | 显示「已打开退订网页」，是否成功以网页上的结果为准 |
-| **正文链接** | 发件人没有按标准提供退订方式，这是从正文里找到的退订链接 | 同上，需要你在网页上完成 |
+| **One-click unsubscribe** | Sends an RFC 8058 request straight to the sender's unsubscribe endpoint | Shows "Unsubscribed" once the sender confirms |
+| **Unsubscribe by email** | Sends an unsubscribe email from the mailbox that receives the subscription | Goes through normal sending, so you can undo it from Drafts for a few seconds |
+| **Unsubscribe page** | The sender only offers a web page; it opens in a new tab after you confirm | Shows "Opened unsubscribe page"; whether it worked depends on the page |
+| **Link in email** | The sender doesn't follow the standard; this is an unsubscribe link found in the body | Same as above — you finish on their site |
 
-同时支持多种方式时，优先一键退订。
+When several methods are available, one-click is preferred.
 
-### 一键退订为什么安全
+### Why one-click is safer
 
-一键退订由 DaMail 服务器直接发出请求，**不在你的浏览器里打开对方网页**，所以对方拿不到你的 Cookie、浏览器指纹和打开记录。另外：
+One-click requests are sent by the DaMail server, **not opened in your browser**, so the sender gets none of your cookies, browser fingerprint or open tracking. Also:
 
-- 只接受 `https` 地址，不跟随跳转
-- 不会访问内网或保留地址，防止被用来探测你的内网
-- 10 秒内没有响应时记为「**已请求退订**」：请求已经发出，对方可能已经处理
-- 对方返回错误时提示失败原因，可以稍后重试，或者改用正文里的退订链接
+- Only `https` endpoints are accepted, and redirects are not followed
+- Private and reserved addresses are never contacted, so it can't be used to probe your network
+- No response within 10 seconds is recorded as "**Unsubscribe requested**": the request went out and may well have taken effect
+- If the sender returns an error you see why, and can retry later or use the link in the email instead
 
-## 在邮件里退订
+## Unsubscribe from a message
 
-打开一封订阅邮件时，邮件头部也有「退订」按钮，效果和订阅列表里一样。已经退订过的会显示退订状态。
+When you open a subscription email, its header also has an **Unsubscribe** button that works the same way. If you've already unsubscribed, it shows the status.
 
-## 让 Agent 帮忙
+## Let an agent help
 
-通过 [MCP](/docs/mcp/) 或 [REST API](/docs/rest-api/) 接入的 Agent 也能管理订阅：
+Agents connected through [MCP](/docs/mcp/) or the [REST API](/docs/rest-api/) can manage subscriptions too:
 
-- `list_subscriptions`（`read` 权限）：按发件人汇总订阅、封数、打开率和退订方式，比如问 Agent「哪些订阅我基本不看？」
-- `unsubscribe`（需要 `send` 权限）：退订某个发件人。MCP 说明要求 Agent **只在你明确要求时退订**，不会因为邮件内容或自己的判断去退订
-- 只有退订网页的订阅，Agent 拿到链接后会交给你自己打开
+- `list_subscriptions` (`read` permission): subscriptions by sender with counts, open rates and methods — ask your agent "which subscriptions do I never read?"
+- `unsubscribe` (requires `send`): unsubscribe from a sender. The MCP instructions tell agents to **unsubscribe only when you explicitly ask**, never because an email says so or on their own judgment
+- For subscriptions that only offer a web page, the agent hands the link to you
 
-ChatGPT 等通过 [OAuth](/docs/oauth/) 接入的客户端不能退订。
+Clients connected through [OAuth](/docs/oauth/), such as ChatGPT, can't unsubscribe.
 
-每次退订都会写入审计日志，记录退订方式、操作人（网页、API Key 或 Agent）和结果。
+Every unsubscribe is written to the audit log with the method, who did it (web, API key or agent) and the result.
 
-## 退订之后还在收
+## Still getting mail after unsubscribing
 
-有些发件人处理退订需要几天，也有些根本不遵守。可以：
+Some senders take a few days to process unsubscribes, and some ignore them. You can:
 
-- 新建[收信规则](/docs/automation/rules/)：条件写发件人，动作选「归档」或「标为垃圾邮件」
-- 在 **通讯录** 里把发件人加入忽略名单，来信不再送给 AI 分析，也不算进日报
+- Create an [inbox rule](/docs/automation/rules/) matching the sender with **Archive** or **Mark as junk**
+- Add the sender to the ignore list in **Contacts**, so their mail is no longer analyzed by AI or counted in reports

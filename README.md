@@ -16,7 +16,7 @@ AI agents get scoped, auditable access to it through MCP and a REST API.
 [![Docker image](https://img.shields.io/badge/ghcr.io-gopkg--dev%2Fdamail-2496ED?logo=docker&logoColor=white)](https://github.com/gopkg-dev/damail/pkgs/container/damail)
 [![License: MIT](https://img.shields.io/github/license/gopkg-dev/damail?color=green)](LICENSE)
 
-[Website](https://damail.app/en/) · [Documentation](https://damail.app/en/docs/) · [Changelog](https://github.com/gopkg-dev/damail/releases) · [简体中文](README.zh-CN.md)
+[Website](https://damail.app/) · [Documentation](https://damail.app/docs/) · [Changelog](https://github.com/gopkg-dev/damail/releases) · [简体中文](README.zh-CN.md)
 
 </div>
 
@@ -57,7 +57,7 @@ curl -fsSL https://damail.app/install.sh | DAMAIL_PUBLIC_URL=https://mail.exampl
 
 **Back up `damail/.env`.** Its `MASTER_KEY` encrypts your mailbox credentials. To upgrade, run the install command again; your `.env` is left as is, and database migrations run on startup.
 
-The [quick start guide](https://damail.app/en/docs/quick-start/) covers installer options, manual setup with Docker Compose, HTTPS and reverse proxies.
+The [quick start guide](https://damail.app/docs/quick-start/) covers installer options, manual setup with Docker Compose, HTTPS and reverse proxies.
 
 ## Connect an AI agent
 
@@ -86,24 +86,24 @@ claude mcp add --transport http damail https://mail.example.com/mcp \
 }
 ```
 
-**ChatGPT** connects through OAuth. Add `https://mail.example.com/mcp` as a custom connector, sign in to DaMail, and choose permissions and mailboxes on the consent page. Setup details are in [ChatGPT and OAuth](https://damail.app/en/docs/oauth/).
+**ChatGPT** connects through OAuth. Add `https://mail.example.com/mcp` as a custom connector, sign in to DaMail, and choose permissions and mailboxes on the consent page. Setup details are in [ChatGPT and OAuth](https://damail.app/docs/oauth/).
 
-**AI assistants.** Proactive assistants such as **Claude Duet**, **ChatGPT dots**, **Grok Bot** and **Meta Muse** connect the same way, through their custom connector settings with OAuth. Once connected they can brief you on new mail, flag what needs a reply and draft answers for your approval. Setup for each assistant is in [AI assistants](https://damail.app/en/docs/assistants/).
+**AI assistants.** Proactive assistants such as **Claude Duet**, **ChatGPT dots**, **Grok Bot** and **Meta Muse** connect the same way, through their custom connector settings with OAuth. Once connected they can brief you on new mail, flag what needs a reply and draft answers for your approval. Setup for each assistant is in [AI assistants](https://damail.app/docs/assistants/).
 
 An agent never sees tools it isn't allowed to use. Without the `send` permission, mail it writes goes to **Drafts → Awaiting approval**.
 
 ## Documentation
 
-The full documentation, in English and Chinese, is at **[damail.app](https://damail.app/en/docs/)**.
+The full documentation, in English and Chinese, is at **[damail.app](https://damail.app/docs/)**.
 
 | Topic | Pages |
 |---|---|
-| Getting started | [Introduction](https://damail.app/en/docs/) · [Quick start](https://damail.app/en/docs/quick-start/) · [Configuration](https://damail.app/en/docs/configuration/) · [Proxies](https://damail.app/en/docs/proxies/) · [Upgrading](https://damail.app/en/docs/upgrade/) |
-| Using DaMail | [Mailboxes](https://damail.app/en/docs/mailboxes/) · [Reading & sending](https://damail.app/en/docs/mail/) · [Subscriptions](https://damail.app/en/docs/subscriptions/) · [Search syntax](https://damail.app/en/docs/search/) |
-| AI features | [Models](https://damail.app/en/docs/ai/models/) · [Mail analysis](https://damail.app/en/docs/ai/analysis/) · [Labels](https://damail.app/en/docs/ai/labels/) · [AI search](https://damail.app/en/docs/ai/search/) · [Assistant](https://damail.app/en/docs/ai/assistant/) · [Translation](https://damail.app/en/docs/ai/translate/) · [Usage & cost](https://damail.app/en/docs/ai/usage/) |
-| Automation | [Inbox rules](https://damail.app/en/docs/automation/rules/) · [Notifications](https://damail.app/en/docs/automation/notifications/) · [Reports & stats](https://damail.app/en/docs/automation/reports/) · [Follow-ups](https://damail.app/en/docs/automation/follow-ups/) |
-| AI agents | [AI assistants](https://damail.app/en/docs/assistants/) · [MCP](https://damail.app/en/docs/mcp/) · [ChatGPT and OAuth](https://damail.app/en/docs/oauth/) · [REST API](https://damail.app/en/docs/rest-api/) |
-| Contributing | [Development](https://damail.app/en/docs/development/) · [Releasing](https://damail.app/en/docs/releasing/) |
+| Getting started | [Introduction](https://damail.app/docs/) · [Quick start](https://damail.app/docs/quick-start/) · [Configuration](https://damail.app/docs/configuration/) · [Proxies](https://damail.app/docs/proxies/) · [Upgrading](https://damail.app/docs/upgrade/) |
+| Using DaMail | [Mailboxes](https://damail.app/docs/mailboxes/) · [Reading & sending](https://damail.app/docs/mail/) · [Subscriptions](https://damail.app/docs/subscriptions/) · [Search syntax](https://damail.app/docs/search/) |
+| AI features | [Models](https://damail.app/docs/ai/models/) · [Mail analysis](https://damail.app/docs/ai/analysis/) · [Labels](https://damail.app/docs/ai/labels/) · [AI search](https://damail.app/docs/ai/search/) · [Assistant](https://damail.app/docs/ai/assistant/) · [Translation](https://damail.app/docs/ai/translate/) · [Usage & cost](https://damail.app/docs/ai/usage/) |
+| Automation | [Inbox rules](https://damail.app/docs/automation/rules/) · [Notifications](https://damail.app/docs/automation/notifications/) · [Reports & stats](https://damail.app/docs/automation/reports/) · [Follow-ups](https://damail.app/docs/automation/follow-ups/) |
+| AI agents | [AI assistants](https://damail.app/docs/assistants/) · [MCP](https://damail.app/docs/mcp/) · [ChatGPT and OAuth](https://damail.app/docs/oauth/) · [REST API](https://damail.app/docs/rest-api/) |
+| Contributing | [Development](https://damail.app/docs/development/) · [Releasing](https://damail.app/docs/releasing/) |
 
 ## How it works
 
@@ -156,7 +156,7 @@ pnpm typecheck   # type-check the server and the web app
 pnpm test        # server tests against a separate damail_test database
 ```
 
-The GreenMail container provides local test accounts, so development never needs a real mailbox. The [development guide](https://damail.app/en/docs/development/) covers the project layout and test data.
+The GreenMail container provides local test accounts, so development never needs a real mailbox. The [development guide](https://damail.app/docs/development/) covers the project layout and test data.
 
 ## Contributing
 

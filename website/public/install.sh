@@ -129,7 +129,7 @@ DaMail 已启动 🎉
   升级      再运行一次安装命令，或在安装目录执行 docker compose pull && docker compose up -d
 
 第一次打开时创建管理员账号。请备份 $DIR_ABS/.env，MASTER_KEY 丢失后已保存的邮箱需要重新添加。
-配置域名和 HTTPS：https://damail.app/docs/quick-start/
+配置域名和 HTTPS：https://damail.app/zh/docs/quick-start/
 EOF
 else
   cat <<EOF
@@ -140,6 +140,6 @@ DaMail is running 🎉
   Upgrade    run the install command again, or docker compose pull && docker compose up -d in the directory
 
 Create the admin account on first visit. Back up $DIR_ABS/.env: if MASTER_KEY is lost, saved mailboxes must be added again.
-Domain and HTTPS setup: https://damail.app/en/docs/quick-start/
+Domain and HTTPS setup: https://damail.app/docs/quick-start/
 EOF
 fi

@@ -1,89 +1,89 @@
 ---
-title: 收发邮件
-description: 统一收件箱、会话、写信、签名、延迟发送与定时发送、草稿审批
+title: Reading & sending
+description: Unified inbox, threads, compose, signatures, undo send and scheduled send, draft approval
 ---
 
-## 统一收件箱
+## Unified inbox
 
-所有邮箱的邮件汇总在一起，左侧栏按视图、分类、标签和邮箱切换：
+Mail from every mailbox comes together in one place. The sidebar switches between views, categories, labels and mailboxes:
 
-| 视图 | 内容 |
+| View | Contents |
 |---|---|
-| 收件箱 | 所有邮箱的收件箱 |
-| 重要 | AI 判定为高优先级的邮件 |
-| 等回复 | 你发出后还在等对方回复的会话，见[等回复与跟进提醒](/docs/automation/follow-ups/) |
-| 未读 / 星标 / 已发送 / 全部邮件 | 跨所有邮箱 |
-| 分类 / 标签 | AI 分类和你的标签，见[分类与标签](/docs/ai/labels/) |
-| 邮箱 | 单个邮箱的邮件和文件夹 |
+| Inbox | The inboxes of all mailboxes |
+| Important | Mail AI marked high priority |
+| Awaiting reply | Threads where you're waiting for an answer — see [Awaiting reply & follow-ups](/docs/automation/follow-ups/) |
+| Unread / Starred / Sent / All Mail | Across every mailbox |
+| Categories / Labels | AI categories and your labels — see [Categories & labels](/docs/ai/labels/) |
+| Mailboxes | One mailbox's mail and folders |
 
-同一件事的往来邮件按**会话**归并在一起，包括你从其他客户端发出的回复。
+Messages about the same thing are grouped into **threads**, including replies you sent from other clients.
 
-- 列表支持**多选**和**右键菜单**：标为已读 / 未读、星标、归档、移动、删除
-- 已读、星标、归档、删除、移动都会**写回邮箱服务器**，手机上的邮件 App 看到的也一样
-- 删除只移到「已删除」；在「已删除」里可以**彻底删除**，会从服务器上永久删除，无法恢复
-- 搜索框支持 `from:` `has:attachment` `is:unread` 等语法，见[搜索语法](/docs/search/)；也可以用 [AI 搜索](/docs/ai/search/)
+- The list supports **multi-select** and a **right-click menu**: read / unread, star, archive, move, delete
+- Read, starred, archive, delete and move are **written back to your mail server**, so your phone's mail app sees the same thing
+- Delete moves mail to Trash; in Trash you can **delete forever**, which removes it from the server permanently
+- The search box supports syntax such as `from:`, `has:attachment` and `is:unread` — see [Search syntax](/docs/search/) — or try [AI search](/docs/ai/search/)
 
-## 阅读邮件
+## Reading mail
 
-- **安全渲染**：HTML 邮件清洗后在禁止脚本的沙箱里显示
-- **远程图片默认拦截**，防止发件人通过追踪像素知道你打开了邮件；需要时点「显示图片」
-- 启用 AI 后，顶部显示 **AI 摘要**卡片：摘要、验证码、金额、截止日期、物流单号和待办
-- 外文邮件点「**翻译**」，见[邮件翻译](/docs/ai/translate/)
-- 可以下载原始邮件（`.eml`）
-- 单封超过 `MAX_MESSAGE_MB`（默认 30MB）的邮件只同步前 2MB，会提示附件可能不完整
+- **Safe rendering**: HTML mail is sanitized and shown in a script-free sandbox
+- **Remote images are blocked by default**, so senders can't use tracking pixels to see that you opened their mail; click **Show images** when you want them
+- With AI on, the **AI summary** card at the top shows the summary, codes, amounts, due dates, tracking numbers and to-dos
+- Click **Translate** for foreign-language mail — see [Translation](/docs/ai/translate/)
+- Download the original message (`.eml`)
+- Messages larger than `MAX_MESSAGE_MB` (30 MB by default) only sync their first 2 MB, with a note that attachments may be incomplete
 
-## 写信
+## Writing mail
 
-点「写邮件」，或在邮件上点回复、全部回复、转发：
+Click **Compose**, or reply, reply all or forward from a message:
 
-- **发件邮箱**：可以选择用哪个邮箱发；回复时默认用收到原邮件的邮箱
-- **收件人**：直接输入，或者「从通讯录选择」，按常联系或最近排序，可以多选
-- **富文本编辑**：加粗、字号、颜色、对齐、列表、引用、链接和表格；图片可以直接粘贴或拖进正文
-- **HTML 源码模式**：粘贴自己写好的 HTML，原样发出
-- **附件**：点按钮添加，或者把文件拖进写信窗口；总大小上限由 `MAX_ATTACHMENT_MB` 控制（默认 25MB）
-- **签名**：每个邮箱可以有不同的签名，写信时自动附在正文后面，发出前可以取消勾选
-- **自动保存**：写信过程中草稿自动保存
+- **From**: choose which mailbox to send from; replies default to the mailbox that received the original
+- **Recipients**: type them, or **Choose from contacts**, sorted by frequency or recency, with multi-select
+- **Rich text**: bold, font size, color, alignment, lists, quotes, links and tables; paste or drag images into the body
+- **HTML source mode**: paste HTML you wrote yourself and send it as is
+- **Attachments**: use the button or drag files into the compose window; the total size limit is `MAX_ATTACHMENT_MB` (25 MB by default)
+- **Signatures**: one per mailbox, added automatically below the body; untick to leave it off
+- **Autosave**: drafts save as you type
 
-### 延迟发送和撤销
+### Undo send
 
-点「发送」后，邮件会等几秒才真正发出（默认 10 秒，由 `SEND_DELAY_SEC` 设置），这期间可以点「**撤销**」，邮件回到草稿继续修改。
+After you click **Send**, the message waits a few seconds before it actually goes out (10 seconds by default, set with `SEND_DELAY_SEC`). Click **Undo** during that time and it returns to drafts.
 
-### 定时发送
+### Scheduled send
 
-点发送按钮旁的箭头选择「定时发送」：今天 18:00、明天 08:00、明天 14:00、下周一 09:00，或者自定义时间（最远一年）。到点之前邮件留在「待发送」里，可以随时取消定时继续修改。
+Use the arrow next to the send button and choose **Schedule send**: today 18:00, tomorrow 08:00, tomorrow 14:00, next Monday 09:00 or a custom time (up to a year ahead). Until then the message sits in the outbox, and you can cancel the schedule and keep editing.
 
 :::note
-定时发送由 DaMail 服务器执行，到点时服务需要在运行。
+Scheduled mail is sent by the DaMail server, so the service needs to be running at that time.
 :::
 
-### 跟进提醒
+### Follow-up reminders
 
-发送按钮旁可以设置「**没回复提醒**」，到时间对方还没回信就推送通知，见[跟进提醒](/docs/automation/follow-ups/#跟进提醒)。
+Next to the send button you can set **Remind if no reply**; if there's no answer by then you get a notification — see [Follow-up reminders](/docs/automation/follow-ups/#follow-up-reminders).
 
-## 草稿与审批
+## Drafts and approval
 
-顶部导航的「**草稿**」集中管理所有还没发出或刚发出的邮件：
+**Drafts** in the top navigation holds everything not yet sent or just sent:
 
-| 标签页 | 内容 |
+| Tab | Contents |
 |---|---|
-| 待审批 | AI 助手、收信规则、MCP 和 REST API 写的邮件，**需要你审批后才会发出** |
-| 草稿 | 你没写完的草稿，以及被你拒绝、等提交方修改的邮件 |
-| 待发送 | 定时发送和正在发送的邮件，可以撤销或取消定时 |
-| 已发送 | 通过 DaMail 发出的邮件记录 |
-| 发送失败 | 没有发出去的邮件和失败原因，修改后可以重新发送 |
+| Awaiting approval | Mail written by the AI assistant, inbox rules, MCP or the REST API — **sent only after you approve it** |
+| Drafts | Your unfinished drafts, plus mail you rejected that's waiting for the submitter to revise |
+| Outbox | Scheduled mail and mail being sent; undo or cancel the schedule |
+| Sent | Mail sent through DaMail |
+| Failed | Mail that didn't go out and why; edit and resend |
 
-审批待审批的邮件时可以：
+When reviewing mail awaiting approval you can:
 
-- **批准并发送**：确认无误直接发出（之后仍有撤销窗口）
-- **修改后发送**：在编辑器里改完再发
-- **拒绝**：提交方（比如 Agent）会看到拒绝状态，可以修改后重新提交
+- **Approve and send**: send it as is (still with an undo window)
+- **Edit, then send**: change it in the editor first
+- **Reject**: the submitter (an agent, for example) sees it was rejected and can revise and resubmit
 
-每封邮件都标明来源（网页、AI 助手、收信规则、MCP、API）和提交方写的说明。想在手机上收到待审批提醒，订阅[通知渠道](/docs/automation/notifications/)的 `draft.pending` 事件。
+Every message shows where it came from (web, AI assistant, inbox rule, MCP, API) and any note from the submitter. To get approval requests on your phone, subscribe a [notification channel](/docs/automation/notifications/) to `draft.pending`.
 
-## 订阅管理
+## Subscriptions
 
-顶部导航的「**订阅**」按发件人汇总营销邮件和邮件列表，显示封数和打开率，很少打开的可以一键退订，不用打开对方网页。详见[订阅管理](/docs/subscriptions/)。
+**Subscriptions** in the top navigation groups marketing mail and mailing lists by sender with counts and open rates, so you can unsubscribe in one click from the ones you never read — without opening their website. See [Subscriptions](/docs/subscriptions/).
 
-## 通讯录
+## Contacts
 
-「**通讯录**」根据收发记录自动整理联系人，显示往来数量和最近联系时间。在这里可以把发件人或整个域名加入**忽略名单**：这些来信不再送给 AI 分析，也不算进日报和概览。
+**Contacts** builds your address book from the mail you send and receive, with message counts and last contact. From here you can add a sender or a whole domain to the **ignore list**: their mail is no longer sent to AI and is left out of reports and the overview.

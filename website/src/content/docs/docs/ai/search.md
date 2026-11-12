@@ -1,39 +1,39 @@
 ---
-title: AI 搜索
-description: 用一句话描述要找的邮件，AI 拆成条件和同义词，再挑出相关的几封
+title: AI search
+description: Describe the email you want in plain language; AI turns it into filters and synonyms, then picks the matches
 ---
 
-记不清关键词的时候，直接描述你要找的邮件，比如：
+When you can't remember the keywords, just describe what you're looking for:
 
-- 上个月云服务的发票
-- 张伟发的那份预算表
-- 去年订机票的确认邮件
-- 有没有人约我下周开会
+- last month's cloud invoice
+- the budget spreadsheet Daniel sent
+- flight booking confirmation from last year
+- did anyone ask me to meet next week?
 
-## 怎么用
+## How to use it
 
-在搜索框输入描述，点旁边的 **AI 搜索**（不点的话是普通关键词搜索）。结果页会显示：
+Type the description into the search box and click **AI search** next to it (otherwise it's a regular keyword search). The results page shows:
 
-- AI 对你描述的理解
-- 从多少封候选里挑出了几封
-- 每封邮件为什么相关，一句话说明
+- how AI understood your description
+- how many messages it picked out of how many candidates
+- a one-line reason why each message matches
 
-点「改用普通搜索」可以切回关键词搜索。
+Click **Use normal search instead** to switch back to keyword search.
 
-## 原理
+## How it works
 
-AI 搜索不依赖向量数据库和 Embeddings 接口，任何能对话的模型都能用：
+AI search needs no vector database or embeddings API — any chat model works:
 
-1. **理解**：模型把描述拆成[搜索语法](/docs/search/)写的过滤条件（时间、发件人、分类等），再列出几组同义关键词，中英文、简称都覆盖
-2. **召回**：用现有的全文索引查出最多 60 封候选邮件
-3. **挑选**：模型根据主题和 AI 摘要挑出真正相关的邮件（最多 20 封），并说明理由
+1. **Understand**: the model turns your description into filters in [search syntax](/docs/search/) (dates, senders, categories…) plus a few groups of synonyms, covering English, Chinese and abbreviations
+2. **Retrieve**: the existing full-text index returns up to 60 candidates
+3. **Pick**: the model reads subjects and AI summaries, picks the messages that really match (up to 20) and explains why
 
-按条件没找到足够的邮件时，会自动放宽：先去掉关键词限制，再去掉过滤条件，结果页会提示放宽了什么。
+If the filters return too few messages, the search relaxes automatically — first dropping keywords, then filters — and the results page says what was relaxed.
 
-## 注意
+## Good to know
 
-- 需要先在[模型配置](/docs/ai/models/)里启用 AI，使用**默认模型**
-- 每次搜索都会调用两次模型，费用记在用量的「语义搜索」下
-- 发给模型的是候选邮件的主题、发件人和摘要，不是完整正文
-- 已经做过[邮件分析](/docs/ai/analysis/)的邮件效果更好，因为挑选时会参考 AI 摘要
-- 只能搜你有权限看到的邮箱
+- AI must be enabled under [Models](/docs/ai/models/); AI search uses the **default model**
+- Each search makes two model calls, recorded as "Semantic search" in usage
+- The model sees candidates' subject, sender and summary, not the full body
+- Results are better for mail that has been through [mail analysis](/docs/ai/analysis/), because picking uses the AI summaries
+- It only searches mailboxes you have access to

@@ -1,98 +1,98 @@
 ---
-title: 通知渠道
-description: Bark、企业微信、钉钉、飞书、Telegram 和自定义 Webhook 推送
+title: Notification channels
+description: Push to Bark, WeCom, DingTalk, Feishu, Telegram and custom webhooks
 ---
 
-通知渠道把重要的事推送到你的手机或群聊：验证码、重要邮件、待审批的草稿、邮箱连接异常、日报周报等。
+Notification channels push what matters to your phone or team chat: verification codes, important mail, drafts awaiting approval, mailbox connection problems, daily and weekly reports.
 
-入口：**智能 → 通知渠道**。渠道有两种用法：
+Go to **AI → Notification channels**. A channel can be used in two ways:
 
-- **订阅事件**：事件发生时自动推送
-- **被规则调用**：在[收信规则](/docs/automation/rules/)里用「推送通知」动作指定渠道
+- **Subscribe to events**: pushed automatically when the event happens
+- **Called by rules**: the **Send notification** action in [inbox rules](/docs/automation/rules/)
 
-## 支持的渠道
+## Supported channels
 
-### Bark（iPhone）
+### Bark (iPhone)
 
-1. 在 iPhone 上安装 Bark App
-2. 首页复制推送地址，形如 `https://api.day.app/XXXX/`
-3. 把其中的 `XXXX` 填到 **Key**
+1. Install the Bark app on your iPhone
+2. Copy the push URL from its home screen, like `https://api.day.app/XXXX/`
+3. Enter the `XXXX` part as the **Key**
 
-自建 Bark 服务时修改「服务器」。推送验证码时，Bark 会**自动复制验证码**，打开通知就能粘贴。
+Change **Server** for a self-hosted Bark server. For verification codes, Bark **copies the code automatically**, ready to paste.
 
-### 企业微信
+### WeCom
 
-1. 打开要接收通知的群聊，点右上角「…」
-2. 选择「消息推送」（或「群机器人」）→ 添加机器人
-3. 复制机器人的 **Webhook 地址**
+1. Open the group chat that should receive notifications and tap "…" in the top right
+2. Choose "Message push" (or "Group robot") → Add robot
+3. Copy the robot's **webhook URL**
 
-### 钉钉
+### DingTalk
 
-1. 群设置 → 机器人 → 添加机器人 → 自定义（通过 Webhook 接入）
-2. 安全设置二选一：**自定义关键词**填 `DaMail`，或者选**加签**并复制 `SEC` 开头的密钥
-3. 复制 **Webhook 地址**；用了加签时把密钥填到「加签密钥」
+1. Group settings → Robots → Add robot → Custom (via webhook)
+2. Pick one security option: **Custom keywords** with `DaMail`, or **Signature** and copy the secret starting with `SEC`
+3. Copy the **webhook URL**; with signatures, enter the secret as the signing secret
 
-### 飞书
+### Feishu / Lark
 
-1. 群设置 → 群机器人 → 添加机器人 → 自定义机器人
-2. 复制 **Webhook 地址**
-3. 开启了「签名校验」时，同时复制密钥填到「签名密钥」
+1. Group settings → Bots → Add bot → Custom bot
+2. Copy the **webhook URL**
+3. If signature verification is on, copy the secret into **Signing secret**
 
 ### Telegram
 
-1. 找 [@BotFather](https://t.me/BotFather) 发送 `/newbot` 创建机器人，复制 **Bot Token**
-2. 给你的机器人发一条消息
-3. 打开 `https://api.telegram.org/bot<Token>/getUpdates`，找到 `chat.id` 填到 **Chat ID**（个人是数字，群组以 `-` 开头）
+1. Message [@BotFather](https://t.me/BotFather) with `/newbot` and copy the **bot token**
+2. Send your bot a message
+3. Open `https://api.telegram.org/bot<Token>/getUpdates` and copy `chat.id` into **Chat ID** (a number for you, starting with `-` for groups)
 
-服务器无法直连 Telegram 时，「API 地址」可以填反向代理。
+If your server can't reach Telegram directly, set **API base** to a reverse proxy.
 
-### 自定义 Webhook
+### Custom webhook
 
-推送到你自己的服务（如 n8n、Home Assistant）：
+Push to your own service (n8n, Home Assistant and so on):
 
-- `POST` JSON：`{ event, title, body, url, data, timestamp }`
-- 请求头 `x-damail-event` 是事件名
-- 填了密钥时带 `x-damail-signature: sha256=<HMAC-SHA256(密钥, 原始请求体)>`
+- `POST` JSON: `{ event, title, body, url, data, timestamp }`
+- The `x-damail-event` header carries the event name
+- With a secret set: `x-damail-signature: sha256=<HMAC-SHA256(secret, raw body)>`
 
-格式和签名校验示例见 [REST API · Webhook](/docs/rest-api/#webhook)。
+See [REST API · Webhook](/docs/rest-api/#webhook) for the format and a verification example.
 
-:::note[内网地址]
-默认禁止推送到内网地址（`10.x`、`192.168.x`、`localhost` 等），防止被用来探测内网。确实要推送到内网服务时，设置环境变量 `ALLOW_PRIVATE_WEBHOOKS=true`。
+:::note[Private addresses]
+Pushing to private addresses (`10.x`, `192.168.x`, `localhost` and so on) is blocked by default, so channels can't be used to probe your network. Set `ALLOW_PRIVATE_WEBHOOKS=true` if you really need to push to an internal service.
 :::
 
-## 可订阅的事件
+## Events
 
-| 分组 | 事件 | 触发时机 |
+| Group | Event | When |
 |---|---|---|
-| 收信 | `message.received` | 收件箱收到新邮件（所有新邮件） |
-| 收信 | `message.important` | AI 判定为高优先级的新邮件 |
-| 收信 | `message.verification` | 收到验证码 |
-| 发信 | `draft.pending` | AI 助手、收信规则或 Agent 提交了待审批的邮件 |
-| 发信 | `draft.sent` | 邮件已发送 |
-| 发信 | `draft.failed` | 邮件发送失败 |
-| 发信 | `followup.due` | [跟进提醒](/docs/automation/follow-ups/)到期，发出的邮件还没有回复 |
-| 系统 | `account.error` | 邮箱连接从正常变为异常 |
-| 日报周报 | `report.daily` | 每日邮件日报生成 |
-| 日报周报 | `report.weekly` | 每周邮件周报生成 |
+| Incoming | `message.received` | New mail in the inbox (every message) |
+| Incoming | `message.important` | New mail marked high priority by AI |
+| Incoming | `message.verification` | A verification code arrived |
+| Sending | `draft.pending` | The AI assistant, an inbox rule or an agent submitted mail for approval |
+| Sending | `draft.sent` | Mail sent |
+| Sending | `draft.failed` | Mail failed to send |
+| Sending | `followup.due` | A [follow-up](/docs/automation/follow-ups/) is due and the sent mail has no reply yet |
+| System | `account.error` | A mailbox connection went from OK to failing |
+| Reports | `report.daily` | Daily mail report generated |
+| Reports | `report.weekly` | Weekly mail report generated |
 
-收信规则调用渠道时，Webhook 收到的事件名是 `rule.matched`，`data.rule` 里带规则的 ID 和名称。
+When an inbox rule calls a channel, webhooks receive the event name `rule.matched`, with the rule's ID and name in `data.rule`.
 
-一个事件都不勾选时，这个渠道只会被收信规则用到。
+A channel with no events ticked is only used by inbox rules.
 
-## 推送规则
+## Delivery
 
-- **同一封邮件对一个渠道只推送一次**：同时满足多个事件时取最具体的一个（验证码 > 重要 > 新邮件）；规则已经推送过的渠道不会再按事件推送
-- **失败重试**：推送失败会在 30 秒、1 分钟、2 分钟后重试，共 4 次
-- **推送记录**：每个渠道的「推送记录」里能看到每条推送的内容、状态和错误
-- **发送测试**：保存前可以点「发送测试」确认能收到
+- **One push per message per channel**: if several events apply, the most specific wins (verification > important > new mail); a channel already notified by a rule isn't notified again by events
+- **Retries**: failed pushes are retried after 30 seconds, 1 minute and 2 minutes — 4 attempts in total
+- **Delivery history**: each channel's delivery history shows every push with its content, status and error
+- **Send test**: check that it arrives before saving
 
-## 推荐配置
+## Suggested setups
 
-| 场景 | 做法 |
+| Goal | Setup |
 |---|---|
-| 验证码推到手机 | Bark 渠道订阅 `message.verification` |
-| 重要邮件提醒 | 企业微信 / 钉钉 / 飞书群订阅 `message.important` |
-| 审批 Agent 写的邮件 | 订阅 `draft.pending`，收到后打开网页审批 |
-| 邮箱掉线提醒 | 订阅 `account.error`（授权码过期、密码修改后会触发） |
-| 每天早上看日报 | 订阅 `report.daily` |
-| 某个发件人单独提醒 | 新建收信规则，条件写发件人，动作选「推送通知」 |
+| Verification codes on your phone | Bark channel subscribed to `message.verification` |
+| Important mail alerts | WeCom / DingTalk / Feishu group subscribed to `message.important` |
+| Approving agent-written mail | Subscribe to `draft.pending`, then approve in the web app |
+| Know when a mailbox drops | Subscribe to `account.error` (fires after an app password expires or a password changes) |
+| Morning digest | Subscribe to `report.daily` |
+| Alerts for one sender | An inbox rule matching the sender with a **Send notification** action |

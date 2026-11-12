@@ -1,48 +1,48 @@
 ---
-title: 分类与标签
-description: 内置分类和自定义标签：AI 根据你的邮件推荐，采用后自动给新邮件打上
+title: Categories & labels
+description: Built-in categories and your own labels — AI suggests them from your mail and applies them to new mail
 ---
 
-**分类**是系统内置的十类，每封邮件只属于其中一类；**标签**是分类之外更细的区分，比如「券商成交确认」「客户 A 项目」，一封邮件可以有多个标签。
+**Categories** are the ten built-in groups; every message belongs to exactly one. **Labels** are finer distinctions on top, such as "Broker trade confirmations" or "Client A project", and a message can have several.
 
-入口：**智能 → 分类与标签**。
+Go to **AI → Categories & labels**.
 
-## 让 AI 推荐标签
+## Let AI suggest labels
 
-推荐比自己写更准：点「根据我的邮件推荐标签」，AI 会看你最近 90 天的邮件，通常几十秒后给出一批推荐。每条推荐显示名称、说明、覆盖的邮件数和例子。
+Suggestions beat writing your own: click **Recommend labels from my mail** and AI reviews the last 90 days of your mail. After a few dozen seconds you get a set of suggestions, each with a name, a description, how many messages it covers and examples.
 
-- **采用**：创建标签，并直接给覆盖到的历史邮件打上
-- **改名**：采用前改个名字
-- **忽略**：不要这条推荐
-- 和已有标签重名时，可以把推荐覆盖的邮件**合并到已有标签**
+- **Accept**: create the label and apply it to the past messages it covers
+- **Rename**: change the name before accepting
+- **Dismiss**: drop the suggestion
+- If the name clashes with an existing label, **Merge into existing label** moves the covered messages there
 
-之后的新邮件由 AI 在分析时自动判断要不要打这个标签。
+From then on, AI decides whether to apply the label when it analyzes new mail.
 
-## 手动新建
+## Create one yourself
 
-点「手动新建」，填写名称和**说明**。AI 只凭说明判断新邮件要不要打这个标签，所以说明要写清楚：
+Click **Create manually** and enter a name and a **description**. AI decides whether a new message gets the label from the description alone, so be specific:
 
-- 是谁发的、哪类邮件
-- 不包括什么
+- who sends it and what kind of mail it is
+- what it does not include
 
-> 例如：Interactive Brokers、富途等券商发的成交确认、持仓日报；不包括营销邮件
+> For example: trade confirmations and daily position statements from brokers such as Interactive Brokers; not marketing mail
 
-名称和说明可以分别填写中文和英文，没填的语言会显示已填语言的内容。
+Names and descriptions can be filled in for both English and Chinese; a missing language falls back to the one you filled in.
 
-## 管理
+## Manage labels
 
-| 操作 | 说明 |
+| Action | Description |
 |---|---|
-| 颜色 | 列表和侧栏里标签的颜色 |
-| 侧栏显示 | 在邮件侧栏「标签」下显示，点击查看该标签的邮件 |
-| 补打 | 让 AI 重新判断最近 30 天的收件箱邮件要不要打这个标签（只处理还没判断过这个标签的邮件，会消耗 AI 额度） |
-| 删除 | 邮件上的这个标签一起去掉，邮件本身不受影响；用到它的收信规则条件不再匹配 |
+| Color | Color of the label in lists and the sidebar |
+| In sidebar | Show it under **Labels** in the mail sidebar |
+| Apply to past | Have AI check the last 30 days of inbox mail for this label (only messages not yet checked for it; uses AI credits) |
+| Delete | Removes the label from messages (the messages stay); inbox rule conditions that use it stop matching |
 
-最多可以有 50 个标签。
+You can have up to 50 labels.
 
-在邮件详情里可以手动添加或去掉标签；手动去掉的标签，以后重新分析也不会再打上。
+You can add or remove labels on a message by hand. A label you remove manually won't be re-applied by later analysis.
 
-## 在其他地方使用
+## Use labels elsewhere
 
-- 搜索：在侧栏点标签，或者用 `label:客户` 语法，见[搜索语法](/docs/search/)
-- [收信规则](/docs/automation/rules/)：条件选「标签」，比如有「券商成交确认」标签就推送到手机
+- Search: click a label in the sidebar, or use `label:client` — see [Search syntax](/docs/search/)
+- [Inbox rules](/docs/automation/rules/): use the **Label** condition, for example to push broker confirmations to your phone

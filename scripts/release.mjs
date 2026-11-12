@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 发布新版本：检查 → 写更新说明 → 打附注标签 → 推送。推送标签后 GitHub Actions 构建镜像、创建 Release（见 https://damail.app/docs/releasing/）。
+ * 发布新版本：检查 → 写更新说明 → 打附注标签 → 推送。推送标签后 GitHub Actions 构建镜像、创建 Release（见 https://damail.app/zh/docs/releasing/）。
  *
  * 用法：
  *   pnpm release 0.2.0            指定版本号（v 可省略），预发布写成 0.3.0-beta.1

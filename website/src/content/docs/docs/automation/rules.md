@@ -1,82 +1,82 @@
 ---
-title: 收信规则
-description: 按发件人、主题、AI 分类等条件组合，自动推送、标记、归档或起草回复
+title: Inbox rules
+description: Combine sender, subject, AI category and more to notify, flag, archive or draft replies automatically
 ---
 
-收信规则在新邮件进入收件箱时，按顺序逐条匹配并执行动作。例如：
+Inbox rules run when new mail reaches your inbox: they are checked in order and their actions run on matches. For example:
 
-- 验证码推送到手机
-- 账单类邮件加星标
-- 营销推广自动归档
-- 某个客户的邮件推送到企业微信群，并让 AI 起草一封确认收到的回复
+- push verification codes to your phone
+- star finance mail
+- archive marketing automatically
+- send a client's mail to a team chat and have AI draft an acknowledgement
 
-入口：**智能 → 收信规则**。规则只对**创建之后收到的**邮件生效。
+Go to **AI → Inbox rules**. Rules only apply to mail received **after they are created**.
 
-## 新建规则
+## Create a rule
 
-### 1. 名称和适用账户
+### 1. Name and mailboxes
 
-给规则起个名字，选择适用的邮箱，不选表示所有邮箱。
+Name the rule and pick the mailboxes it applies to; none selected means all mailboxes.
 
-### 2. 触发条件
+### 2. Conditions
 
-选择「当邮件满足**全部** / **任一**条件」，然后添加条件：
+Choose "when mail matches **all** / **any** conditions", then add conditions:
 
-| 条件 | 可选判断 | 说明 |
+| Condition | Checks | Notes |
 |---|---|---|
-| 发件人 | 包含 / 不包含 / 等于 / 匹配正则 | 匹配名称和地址 |
-| 收件人 / 抄送 | 同上 | |
-| 主题 | 同上 | |
-| 正文 | 同上 | |
-| 任意位置 | 同上 | 发件人、收件人、主题、正文任一处 |
-| 有附件 | 是 / 否 | |
-| 未读 | 是 / 否 | |
-| AI 分类 | 是 / 不是 | 需要启用[邮件分析](/docs/ai/analysis/) |
-| AI 优先级 | 是 / 不是 | 高 / 普通 / 低 |
-| AI 判断需回复 | 是 / 否 | |
-| 含验证码 | 是 / 否 | AI 提取到了验证码 |
-| 标签 | 有 / 没有 | 见[分类与标签](/docs/ai/labels/) |
+| From | contains / doesn't contain / equals / matches regex | Name and address |
+| To / Cc | same | |
+| Subject | same | |
+| Body | same | |
+| Anywhere | same | From, to, subject or body |
+| Has attachment | yes / no | |
+| Unread | yes / no | |
+| AI category | is / is not | Requires [mail analysis](/docs/ai/analysis/) |
+| AI priority | is / is not | High / normal / low |
+| AI says needs reply | yes / no | |
+| Has verification code | yes / no | AI extracted a code |
+| Label | labeled / not labeled | See [Categories & labels](/docs/ai/labels/) |
 
-文字匹配都**不区分大小写**；正则也是。
+Text matching is **case-insensitive**, including regex.
 
 :::note
-用到 AI 条件时，规则会等这封邮件分析完再匹配。AI 没启用、或者这封邮件分析失败时，AI 条件不会命中，其他条件照常判断。
+Rules are checked after the message has been analyzed. If AI is off or analysis failed for that message, AI conditions don't match; other conditions are still checked.
 :::
 
-### 3. 执行动作
+### 3. Actions
 
-| 动作 | 说明 |
+| Action | Description |
 |---|---|
-| 推送通知 | 推送到指定的[通知渠道](/docs/automation/notifications/) |
-| 标为已读 | 同步回邮箱服务器 |
-| 加星标 | 同步回邮箱服务器 |
-| 归档 | 移到归档文件夹 |
-| 移动到文件夹 | 只对该文件夹所属邮箱的邮件生效 |
-| 标为垃圾邮件 | 移到垃圾邮件文件夹 |
-| 删除到废纸篓 | 移到已删除，不会彻底删除 |
-| AI 起草回复（待审批） | 按你写的要求起草回复，进入 **草稿 → 待审批** |
+| Send notification | Push to a chosen [notification channel](/docs/automation/notifications/) |
+| Mark as read | Written back to the mail server |
+| Star | Written back to the mail server |
+| Archive | Moves to the archive folder |
+| Move to folder | Only applies to mail in that folder's mailbox |
+| Mark as junk | Moves to the junk folder |
+| Move to trash | Moves to trash; nothing is deleted permanently |
+| AI reply draft (needs approval) | Drafts a reply following your instructions into **Drafts → Awaiting approval** |
 
-一条规则可以有多个动作。会移动邮件的动作（归档、移动、垃圾、删除）总是**最后执行**，避免邮件被移走后其他动作找不到它。
+A rule can have several actions. Actions that move the message (archive, move, junk, trash) always **run last**, so the other actions can still find it.
 
-勾选「**命中后停止**」后，这条规则命中时不再执行后面的规则。
+With **stop processing** on, later rules are skipped when this one matches.
 
-## 试运行
+## Dry run
 
-保存前点「试运行」，会在**最近 200 封收件箱邮件**上测试条件，列出会命中的邮件。试运行不执行任何动作。
+Before saving, click **Dry run** to test the conditions against the **last 200 inbox messages** and see which would match. A dry run never performs any action.
 
-## AI 起草回复
+## AI reply drafts
 
-- 回复要求写清楚语气和要点，例如「礼貌确认收到，告知周五前回复」
-- 起草的邮件**只进入待审批，绝不自动发出**，你在网页上确认或修改后才发送
-- 来自你自己其他邮箱的邮件**不起草**，避免两个邮箱互相回复形成循环
-- 草稿进入待审批时，订阅了「Agent 提交了待审批的邮件」事件的渠道会收到通知
+- Spell out the tone and points, such as "politely confirm receipt and say I'll reply by Friday"
+- Drafts **only go to the approval queue and are never sent automatically** — you confirm or edit them first
+- Mail from your own other mailboxes is **never drafted for**, so two mailboxes can't reply to each other in a loop
+- Channels subscribed to "an agent submitted mail for approval" are notified when the draft is queued
 
-## 管理
+## Managing rules
 
-规则列表显示每条规则的命中次数和最近一次命中时间。用上下箭头调整顺序，开关控制启用。
+The rule list shows match counts and when each rule last matched. Reorder with the up / down arrows, and toggle rules on or off.
 
-规则命中会写入**审计日志**，可以查看每次命中执行了哪些动作、有没有失败。
+Every match is written to the **audit log**, including which actions ran and whether any failed.
 
-## 不会触发规则的情况
+## When rules don't run
 
-和邮件分析一样，只有收件箱里新到的、3 天内的邮件会触发规则。首次回溯同步、重新同步、把旧邮件移回收件箱都不会触发。
+As with analysis, only new inbox mail from the last 3 days triggers rules. The initial backfill, resyncs and moving old mail back to the inbox don't.
