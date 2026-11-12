@@ -67,6 +67,32 @@ describe('审批绑定草稿版本', () => {
   });
 });
 
+describe('审批时保存全部发送字段', () => {
+  test('Agent 审阅期间偷加的密送，在网页保存全部字段后被清掉，不会随审批发出', async () => {
+    const tok = await obtainTokens(env, { scope: 'mail:read mail:draft', mailboxes: [env.accounts.work.id] });
+    const created = await callTool(env, tok.access_token!, 'create_draft', { body: '正文', to: ['friend@example.com'], account_id: env.accounts.work.id });
+    const id = JSON.parse(toolText(created)).id as number;
+    await callTool(env, tok.access_token!, 'request_send', { id });
+
+    const web = await sessionBrowser();
+    const reviewed = (await (await web.request(`/api/v1/drafts/${id}`)).json()) as { to: { address: string }[]; subject: string; body: string };
+    await callTool(env, tok.access_token!, 'update_draft', { id, bcc: ['spy@example.com'] });
+
+    // 网页写信窗口批准前的保存：提交全部发送字段，抄送 / 密送行折叠时也传空数组
+    const saved = await web.request(`/api/v1/drafts/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', origin: env.base, 'x-damail': '1' },
+      body: JSON.stringify({ to: reviewed.to.map((a) => a.address), cc: [], bcc: [], subject: reviewed.subject, body: reviewed.body }),
+    });
+    assert.equal(saved.status, 200);
+    const latest = (await saved.json()) as { revision: number; bcc: unknown[] };
+    assert.deepEqual(latest.bcc, []);
+    assert.equal((await web.request(`/api/v1/drafts/${id}/send`, json({ revision: latest.revision }))).status, 200);
+    const row = await env.db.query.drafts.findFirst({ where: (d, { eq }) => eq(d.id, id) });
+    assert.deepEqual([row!.status, row!.bcc], ['queued', []]);
+  });
+});
+
 describe('请求体上限', () => {
   test('未登录接口的超大请求体在解析前返回 413', async () => {
     const big = JSON.stringify({ username: 'x', password: 'y'.repeat(3 * 1024 * 1024) });
@@ -143,6 +169,17 @@ describe('邮件里的 NUL 字符', () => {
 });
 
 describe('工具函数', () => {
+  test('只有邮件数据本身的错误才算可以跳过的入库失败', async () => {
+    const { isMessageDataError } = await import('../src/lib/db-errors.js');
+    const { sql } = await import('drizzle-orm');
+    const nul = await env.db.execute(sql`SELECT ${'a\u0000b'}::text`).catch((e: unknown) => e);
+    assert.equal(isMessageDataError(nul), true, '字符串里的 NUL 是数据错误');
+    const missing = await env.db.execute(sql`SELECT * FROM no_such_table`).catch((e: unknown) => e);
+    assert.equal(isMessageDataError(missing), false, '其他数据库错误不跳过');
+    assert.equal(isMessageDataError(Object.assign(new Error('connection reset'), { code: 'ECONNRESET' })), false);
+    assert.equal(isMessageDataError(Object.assign(new Error('disk full'), { code: 'ENOSPC' })), false);
+  });
+
   test('只有本机地址允许不加密的 SMTP / IMAP', async () => {
     const { allowsPlaintext } = await import('../src/lib/transport-security.js');
     for (const h of ['localhost', '127.0.0.1', '127.1.2.3', '::1', '[::1]', 'mail.localhost']) assert.equal(allowsPlaintext(h), true, h);

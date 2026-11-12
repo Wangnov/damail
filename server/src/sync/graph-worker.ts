@@ -8,6 +8,7 @@ import { ingestMessage } from '../services/ingest.js';
 import { onNewMessage } from '../services/pipeline.js';
 import { describeGraphError, graphBatch, graphFetch, graphJson, GraphError } from './graph.js';
 import { isDefaultSynced, nextUid, StatusReporter } from './status.js';
+import { isMessageDataError } from '../lib/db-errors.js';
 
 const TRUNCATED_BYTES = 2 * 1024 * 1024;
 // Graph 没有 IDLE，收件箱靠轮询；其他文件夹按 pollInterval
@@ -247,7 +248,7 @@ export class GraphWorker {
         const res = await graphFetch(account, `/me/messages/${item.id}/$value`, { timeoutMs: 300_000 });
         // 边下载边计数，超过上限立即中断：不能先把整封读进内存再判断大小
         const { data, overflow: truncated, total } = await readCapped(res, config.maxMessageBytes);
-        // 单封入库失败只跳过这一封，不影响后面的邮件同步
+        // 邮件数据本身有问题时只跳过这一封；其他错误照常抛出，不推进同步进度，下次重试
         let row: Awaited<ReturnType<typeof ingestMessage>>;
         try {
           row = await ingestMessage({
@@ -262,7 +263,8 @@ export class GraphWorker {
             truncated,
           });
         } catch (err) {
-          console.warn(`[graph:${this.accountId}] ${folder.path} ${item.id} 入库失败，已跳过：`, (err as Error).message);
+          if (!isMessageDataError(err)) throw err;
+          console.warn(`[graph:${this.accountId}] ${folder.path} ${item.id} 邮件数据无法入库，已跳过：`, (err as Error).message);
           continue;
         }
         newInPage++;

@@ -218,12 +218,16 @@ function FieldRow({ label, className, children, extra }: { label: string; classN
   );
 }
 
+/**
+ * 保存时提交全部发送字段：收件人列表为空也传 []，服务端才会清空。
+ * 只传部分字段时，服务端会保留没传的字段，可能带上用户没看到的修改（比如 Agent 后来加的密送）。
+ */
 function toBody(v: Partial<Values>) {
   return {
     accountId: v.accountId,
-    to: v.to,
-    cc: v.cc,
-    bcc: v.bcc,
+    to: v.to ?? [],
+    cc: v.cc ?? [],
+    bcc: v.bcc ?? [],
     subject: v.subject,
     body: v.body,
     bodyHtml: v.bodyHtml || null,
@@ -305,7 +309,8 @@ function ComposeDrawer({
       dirty.current = false;
       setSaveState('saving');
       try {
-        saved.current = await api<Draft>(`/api/v1/drafts/${draftId}`, { method: 'PATCH', body: toBody(form.getFieldsValue()) });
+        // getFieldsValue(true) 读整个表单：抄送 / 密送行折叠时字段没挂载，不带 true 会漏掉它们
+        saved.current = await api<Draft>(`/api/v1/drafts/${draftId}`, { method: 'PATCH', body: toBody(form.getFieldsValue(true)) });
         setSaveState('saved');
       } catch (e) {
         dirty.current = true;
@@ -362,7 +367,7 @@ function ComposeDrawer({
   const [customAt, setCustomAt] = useState<Dayjs | null>(null);
 
   const send = async (sendAt?: Dayjs) => {
-    const v = form.getFieldsValue();
+    const v = form.getFieldsValue(true);
     if (!v.to?.length && !v.cc?.length && !v.bcc?.length) return message.warning(t.compose.needRecipients);
     if (!v.subject?.trim() && !v.body?.trim()) return message.warning(t.compose.emptyMail);
     setBusy('send');
