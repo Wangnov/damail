@@ -346,7 +346,7 @@ function ChannelModal({ channel, onCancel, onOk }: { channel: ChannelDraft; onCa
           name="concurrency"
           label={t.aiSettings.concurrency}
           extra={t.aiSettings.concurrencyExtra}
-          // 分段控制器不收 null：「不限制」用 0 表示，保存时再转回 null
+          // 分段控制器不收 null：「默认」用 0 表示，保存时再转回 null
           getValueProps={(v: number | null | undefined) => ({ value: v || 0 })}
           normalize={(v: number) => v || null}
         >

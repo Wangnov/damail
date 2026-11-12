@@ -41,7 +41,11 @@ describe('并发上限', () => {
 
     peak = 0;
     await Promise.all(Array.from({ length: 6 }, () => call(channel(null))));
-    assert.equal(peak, 6, '不限制时全部同时进行');
+    assert.equal(peak, 6, '没设上限时，默认上限以内全部同时进行');
+
+    peak = 0;
+    await Promise.all(Array.from({ length: limit.DEFAULT_AI_CONCURRENCY + 5 }, () => call(channel(null))));
+    assert.equal(peak, limit.DEFAULT_AI_CONCURRENCY, '没设上限也不能无限并发');
 
     const other = { ...channel(1), channelId: 'c2' };
     const release = await limit.acquireAiSlot(other);

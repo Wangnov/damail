@@ -29,25 +29,28 @@ const COOKIE = 'dm_session';
 const SESSION_SCOPES = ['read', 'organize', 'draft', 'send', 'automation', 'admin'];
 const SESSION_TTL = 30 * 24 * 3600;
 
-// pv 是密码哈希的指纹，改密码后旧会话（包括其他设备上的）全部失效
+// pv 是密码哈希和会话纪元的指纹：改密码或退出登录后，旧会话（包括其他设备上、被复制走的）全部失效
 type SessionPayload = { uid: number; exp: number; pv: string };
+type SessionUser = { id: number; passwordHash: string; sessionEpoch: number };
 
-const passwordVersion = (passwordHash: string) => sha256(passwordHash).slice(0, 16);
+// 纪元为 0 时保持旧算法，升级后已登录的会话不受影响
+const sessionVersion = (u: Pick<SessionUser, 'passwordHash' | 'sessionEpoch'>) =>
+  sha256(u.sessionEpoch ? `${u.passwordHash}:${u.sessionEpoch}` : u.passwordHash).slice(0, 16);
 const versions = new Map<number, string>();
 
 async function currentVersion(userId: number) {
   let v = versions.get(userId);
   if (v === undefined) {
-    const user = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { passwordHash: true } });
+    const user = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { passwordHash: true, sessionEpoch: true } });
     if (!user) return null;
-    v = passwordVersion(user.passwordHash);
+    v = sessionVersion(user);
     versions.set(userId, v);
   }
   return v;
 }
 
-export function issueSession(c: Context, user: { id: number; passwordHash: string }) {
-  const pv = passwordVersion(user.passwordHash);
+export function issueSession(c: Context, user: SessionUser) {
+  const pv = sessionVersion(user);
   versions.set(user.id, pv);
   const token = signSession({ uid: user.id, exp: Math.floor(Date.now() / 1000) + SESSION_TTL, pv } satisfies SessionPayload);
   setCookie(c, COOKIE, token, {
@@ -61,6 +64,17 @@ export function issueSession(c: Context, user: { id: number; passwordHash: strin
 
 export function clearSession(c: Context) {
   deleteCookie(c, COOKIE, { path: '/' });
+}
+
+/** 让这个用户已签发的所有会话失效（退出登录时调用），只删 cookie 挡不住被复制走的会话 */
+export async function revokeSessions(userId: number) {
+  const [user] = await db
+    .update(users)
+    .set({ sessionEpoch: sql`${users.sessionEpoch} + 1` })
+    .where(eq(users.id, userId))
+    .returning({ passwordHash: users.passwordHash, sessionEpoch: users.sessionEpoch });
+  if (user) versions.set(userId, sessionVersion(user));
+  else versions.delete(userId);
 }
 
 export async function readSession(c: Context): Promise<number | null> {

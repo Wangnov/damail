@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
-import { clearSession, issueSession, readSession, requireSession, type AppEnv } from '../auth/index.js';
+import { clearSession, issueSession, readSession, requireSession, revokeSessions, type AppEnv } from '../auth/index.js';
 import { db } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { audit, requestIp } from '../lib/audit.js';
@@ -101,12 +101,17 @@ export const authRoutes = new Hono<AppEnv>()
   .post('/setup', async (c) => {
     const body = credentials.safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) return c.json({ error: body.error.issues[0]?.message }, 400);
+    // 已经初始化过就直接拒绝，不白算哈希；哈希比较慢，放在锁外面算
+    if (await db.$count(users)) return c.json({ error: t().common.auth.alreadySetup }, 409);
+    const passwordHash = await hashPassword(body.data.password);
     const created = await db.transaction(async (tx) => {
+      // 事务级咨询锁让并发的初始化请求排队：否则两个请求都看到 0 个用户，会各建一个管理员
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('damail:setup'))`);
       const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(users);
       if (count > 0) return null;
       const [u] = await tx
         .insert(users)
-        .values({ username: body.data.username, passwordHash: await hashPassword(body.data.password), locale: normalizeLocale(body.data.locale) ?? 'zh-CN' })
+        .values({ username: body.data.username, passwordHash, locale: normalizeLocale(body.data.locale) ?? 'zh-CN' })
         .returning();
       return u;
     });
@@ -173,7 +178,10 @@ export const authRoutes = new Hono<AppEnv>()
   })
   .post('/logout', async (c) => {
     const uid = await readSession(c);
-    if (uid) audit(`user:${uid}`, 'auth.logout');
+    if (uid) {
+      await revokeSessions(uid);
+      audit(`user:${uid}`, 'auth.logout');
+    }
     clearSession(c);
     return c.json({ ok: true });
   });

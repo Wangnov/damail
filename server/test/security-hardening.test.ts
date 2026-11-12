@@ -168,3 +168,54 @@ describe('工具函数', () => {
     assert.deepEqual([small.overflow, small.data.toString(), small.total], [false, 'hello', 5]);
   });
 });
+
+describe('OAuth 直接发信配额', () => {
+  test('并发发送也不会超过每小时上限', async () => {
+    // 测试环境的上限是每小时 2 封
+    const tok = await obtainTokens(env, { scope: 'mail:read mail:draft mail:send', mailboxes: [env.accounts.work.id] });
+    const ids: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const created = await callTool(env, tok.access_token!, 'create_draft', { body: `b${i}`, to: ['friend@example.com'], account_id: env.accounts.work.id });
+      ids.push(JSON.parse(toolText(created)).id as number);
+    }
+    const results = await Promise.all(ids.map((id) => callTool(env, tok.access_token!, 'send_draft', { id })));
+    assert.equal(results.filter((r) => !r.json.result?.isError).length, 2);
+    const queued = await env.db.query.drafts.findMany({ where: (d, { inArray, eq, and }) => and(inArray(d.id, ids), eq(d.status, 'queued')) });
+    assert.equal(queued.length, 2);
+  });
+});
+
+describe('退出登录', () => {
+  test('退出后，之前复制走的会话 cookie 也失效', async () => {
+    const web = await sessionBrowser('bob');
+    const copied = new Browser(env.base);
+    copied.cookies = new Map(web.cookies);
+    assert.equal((await copied.request('/api/v1/accounts')).status, 200);
+
+    const out = await web.request('/api/auth/logout', { method: 'POST', headers: { origin: env.base, 'x-damail': '1' } });
+    assert.equal(out.status, 200);
+    assert.equal((await copied.request('/api/v1/accounts')).status, 401);
+
+    // 重新登录正常
+    const again = await sessionBrowser('bob');
+    assert.equal((await again.request('/api/v1/accounts')).status, 200);
+  });
+});
+
+// 会清空用户表，放在最后
+describe('首次初始化', () => {
+  test('并发初始化只会创建一个管理员', async () => {
+    await env.db.delete(env.schema.users);
+    const results = await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        fetch(`${env.base}/api/auth/setup`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username: `admin${i}`, password: 'a-strong-password' }),
+        }).then((r) => r.status),
+      ),
+    );
+    assert.equal(results.filter((s) => s === 200).length, 1, String(results));
+    assert.equal(await env.db.$count(env.schema.users), 1);
+  });
+});
