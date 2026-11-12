@@ -23,6 +23,7 @@ import { auditAdminRoutes } from './api/audit-admin.js';
 import { updateRoutes } from './api/updates.js';
 import { oauthRoutes as mcpOAuthRoutes } from './oauth/routes.js';
 import { ActionError } from './services/actions.js';
+import { AiQueueFullError } from './services/ai-limit.js';
 import { describeImapError } from './sync/imap.js';
 
 const MB = 1024 * 1024;
@@ -83,6 +84,11 @@ export function createApp() {
   app.onError((err, c) => {
     if (err instanceof ActionError) return c.json({ error: err.message }, err.status);
     if (err instanceof ZodError) return c.json({ error: err.issues[0]?.message ?? t().common.invalidParams }, 400);
+    // AI 排队已满是暂时的，提示客户端稍后重试
+    if (err instanceof AiQueueFullError) {
+      c.header('Retry-After', '30');
+      return c.json({ error: err.message }, 503);
+    }
     // IMAP 写操作失败（服务器拒绝、断线等）
     if ((err as { responseText?: string }).responseText || (err as { code?: string }).code?.startsWith?.('E'))
       return c.json({ error: t().common.mailServerFailed(describeImapError(err)) }, 502);

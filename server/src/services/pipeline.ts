@@ -9,7 +9,7 @@ import { moveMessages, setFlags } from './actions.js';
 import { classifyMessage, getAiConfig, categoryLabel } from './ai.js';
 import { isIgnoredSender, isIgnoredSql } from './contacts.js';
 import { createDraft, submitDraft, updateDraft } from './drafts.js';
-import { enqueue, registerJob, RetryableError } from './jobs.js';
+import { DeferredError, enqueue, registerJob, RetryableError } from './jobs.js';
 import { appUrl, notifyChannel, type EventName, type Notice } from './notify.js';
 import { listRules, ruleMatches } from './rules.js';
 import { allLabelIds, applyAiLabels, messageLabelIds, promptLabels } from './labels.js';
@@ -141,8 +141,9 @@ registerJob(
         if (out.labelIds.length) result.labels = out.labelIds;
         bus.publish({ type: 'messages.updated', accountId: m.accountId, folderId: m.folderId });
       } catch (err) {
-        // 可重试的错误先重试；最后一次仍失败就跳过 AI，规则和通知照常执行
-        if (err instanceof RetryableError && !ctx.lastAttempt) throw err;
+        // 可重试的错误先重试；最后一次仍失败就跳过 AI，规则和通知照常执行。
+        // AI 排队已满这类「暂时没空」的错误总是交给任务队列推迟，不算失败
+        if (err instanceof DeferredError || (err instanceof RetryableError && !ctx.lastAttempt)) throw err;
         result.aiError = (err as Error).message;
       }
     }

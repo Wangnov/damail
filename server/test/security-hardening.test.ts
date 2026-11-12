@@ -306,3 +306,103 @@ describe('工具函数', () => {
     assert.deepEqual([small.overflow, small.data.toString(), small.total], [false, 'hello', 5]);
   });
 });
+
+describe('OAuth 直接发信配额', () => {
+  test('并发发送也不会超过每小时上限', async () => {
+    // 测试环境的上限是每小时 2 封
+    const tok = await obtainTokens(env, { scope: 'mail:read mail:draft mail:send', mailboxes: [env.accounts.work.id] });
+    const ids: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const created = await callTool(env, tok.access_token!, 'create_draft', { body: `b${i}`, to: ['friend@example.com'], account_id: env.accounts.work.id });
+      ids.push(JSON.parse(toolText(created)).id as number);
+    }
+    const results = await Promise.all(ids.map((id) => callTool(env, tok.access_token!, 'send_draft', { id })));
+    assert.equal(results.filter((r) => !r.json.result?.isError).length, 2);
+    const queued = await env.db.query.drafts.findMany({ where: (d, { inArray, eq, and }) => and(inArray(d.id, ids), eq(d.status, 'queued')) });
+    assert.equal(queued.length, 2);
+  });
+});
+
+describe('退出登录', () => {
+  test('退出后，之前复制走的会话 cookie 也失效', async () => {
+    const web = await sessionBrowser('bob');
+    const copied = new Browser(env.base);
+    copied.cookies = new Map(web.cookies);
+    assert.equal((await copied.request('/api/v1/accounts')).status, 200);
+
+    const out = await web.request('/api/auth/logout', { method: 'POST', headers: { origin: env.base, 'x-damail': '1' } });
+    assert.equal(out.status, 200);
+    assert.equal((await copied.request('/api/v1/accounts')).status, 401);
+
+    // 重新登录正常
+    const again = await sessionBrowser('bob');
+    assert.equal((await again.request('/api/v1/accounts')).status, 200);
+  });
+
+  test('登录校验密码期间退出登录，之前复制走的 cookie 也不会重新生效', async () => {
+    for (let i = 0; i < 3; i++) {
+      const web = await sessionBrowser('bob');
+      const copied = new Browser(env.base);
+      copied.cookies = new Map(web.cookies);
+      // 登录先读出用户，再花时间校验密码；在这期间完成退出登录
+      const login = new Browser(env.base).request('/api/auth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username: 'bob', password: PASSWORD }),
+      });
+      await new Promise((r) => setTimeout(r, 15));
+      assert.equal((await web.request('/api/auth/logout', { method: 'POST', headers: { origin: env.base, 'x-damail': '1' } })).status, 200);
+      assert.equal((await login).status, 200);
+      assert.equal((await copied.request('/api/v1/accounts')).status, 401, `第 ${i + 1} 次`);
+    }
+  });
+});
+
+describe('会话签发和退出登录的保护', () => {
+  test('登录校验密码期间密码被改了，用旧密码登录不签发会话', async () => {
+    const { hashPassword } = await import('../src/lib/crypto.js');
+    const { eq, sql } = await import('drizzle-orm');
+    const { users } = env.schema;
+    const bob = await env.db.query.users.findFirst({ where: (u, { eq }) => eq(u.username, 'bob') });
+    const newHash = await hashPassword('another password 123');
+    const login = new Browser(env.base);
+    const pending = login.request('/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'bob', password: PASSWORD }),
+    });
+    // 登录已经读出用户、正在校验旧密码时，密码被改掉（改密码会让纪元加一）
+    await new Promise((r) => setTimeout(r, 10));
+    await env.db.update(users).set({ passwordHash: newHash, sessionEpoch: sql`${users.sessionEpoch} + 1` }).where(eq(users.id, bob!.id));
+    const res = await pending;
+    assert.equal(res.status, 401);
+    assert.equal((await login.request('/api/v1/accounts')).status, 401);
+    // 恢复原密码，纪元再加一保持「纪元相同 = 密码哈希相同」
+    await env.db.update(users).set({ passwordHash: bob!.passwordHash, sessionEpoch: sql`${users.sessionEpoch} + 1` }).where(eq(users.id, bob!.id));
+  });
+
+  test('退出登录不带 x-damail 头会被拒绝，会话不受影响', async () => {
+    const web = await sessionBrowser('bob');
+    const res = await web.request('/api/auth/logout', { method: 'POST', headers: { origin: env.base } });
+    assert.equal(res.status, 403);
+    assert.equal((await web.request('/api/v1/accounts')).status, 200);
+  });
+});
+
+// 会清空用户表，放在最后
+describe('首次初始化', () => {
+  test('并发初始化只会创建一个管理员', async () => {
+    await env.db.delete(env.schema.users);
+    const results = await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        fetch(`${env.base}/api/auth/setup`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username: `admin${i}`, password: 'a-strong-password' }),
+        }).then((r) => r.status),
+      ),
+    );
+    assert.equal(results.filter((s) => s === 200).length, 1, String(results));
+    assert.equal(await env.db.$count(env.schema.users), 1);
+  });
+});

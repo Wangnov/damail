@@ -22,6 +22,11 @@ export async function enqueue(type: string, payload: Record<string, unknown>, de
 /** 可重试的错误（网络、限流），其余错误直接失败 */
 export class RetryableError extends Error {}
 
+/** 暂时没有处理能力（例如 AI 排队已满）：稍后重新排队，不消耗重试次数 */
+export class DeferredError extends RetryableError {
+  readonly delayMs: number = 30_000;
+}
+
 let timer: NodeJS.Timeout | null = null;
 let running = 0;
 let woken = false;
@@ -42,6 +47,14 @@ async function runOne(job: typeof jobs.$inferSelect) {
       .where(eq(jobs.id, job.id));
   } catch (err) {
     const message = (err as Error).message || String(err);
+    if (err instanceof DeferredError) {
+      // 推迟后重新排队，领取时加上的那次尝试退回去；加一点随机，避免同时堆回来
+      await db
+        .update(jobs)
+        .set({ status: 'queued', error: message, attempts: sql`${jobs.attempts} - 1`, runAt: new Date(Date.now() + err.delayMs + Math.random() * 10_000) })
+        .where(eq(jobs.id, job.id));
+      return;
+    }
     const retry = err instanceof RetryableError && job.attempts < (handler?.maxAttempts ?? 1);
     await db
       .update(jobs)

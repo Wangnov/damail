@@ -288,7 +288,13 @@ async function loadOwned(auth: AuthContext, id: number): Promise<Draft> {
 }
 
 /** OAuth 客户端直接发信的频率上限（按授权统计最近一小时入队 / 已发出的数量） */
-async function assertOAuthSendQuota(auth: AuthContext) {
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * OAuth 直接发信的每小时配额。要在入队的同一个事务里调用：
+ * 先按授权加事务级咨询锁，并发请求排队检查，不会都看到「还有余量」而一起超额。
+ */
+async function assertOAuthSendQuota(auth: AuthContext, tx: Tx) {
   if (auth.kind !== 'oauth' || !auth.oauth) return;
   const limit = config.mcpOAuth.sendLimitPerHour;
   if (limit <= 0)
@@ -299,7 +305,8 @@ async function assertOAuthSendQuota(auth: AuthContext) {
       ),
       403,
     );
-  const [{ n }] = await db
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('damail:oauth-send'), ${auth.oauth.authorizationId}::int)`);
+  const [{ n }] = await tx
     .select({ n: sql<number>`count(*)::int` })
     .from(drafts)
     .where(
@@ -489,16 +496,20 @@ export async function queueDraft(auth: AuthContext, id: number, opts: { delaySec
     throw new ActionError(L('批准时缺少草稿版本，请刷新后重试', 'Missing draft version for approval; refresh and try again'), 400);
   if (opts.revision !== undefined && opts.revision !== d.revision) throw draftChanged();
   await checkSendable(d);
-  await assertOAuthSendQuota(auth);
   if (opts.sendAt && opts.sendAt.getTime() > Date.now() + 366 * 86_400_000)
     throw new ActionError(L('定时发送最多只能安排在一年以内', 'Scheduled sending must be within one year'));
   // 定时时间已过（例如在页面上停留太久）就按正常的撤销窗口发送
   const sendAt = opts.sendAt && opts.sendAt.getTime() > Date.now() ? opts.sendAt : new Date(Date.now() + (opts.delaySec ?? config.sendDelaySec) * 1000);
-  const [row] = await db
-    .update(drafts)
-    .set({ status: 'queued', sendAt, error: null, attempts: 0, updatedAt: new Date() })
-    .where(and(eq(drafts.id, id), eq(drafts.status, d.status), eq(drafts.revision, d.revision)))
-    .returning();
+  // 配额检查和入队放在同一个事务里
+  const row = await db.transaction(async (tx) => {
+    await assertOAuthSendQuota(auth, tx);
+    const [queued] = await tx
+      .update(drafts)
+      .set({ status: 'queued', sendAt, error: null, attempts: 0, updatedAt: new Date() })
+      .where(and(eq(drafts.id, id), eq(drafts.status, d.status), eq(drafts.revision, d.revision)))
+      .returning();
+    return queued;
+  });
   if (!row) throw new ActionError(L('草稿状态已变化，请刷新后重试', 'The draft has changed; refresh and try again'), 409);
   audit(actorOf(auth), d.status === 'pending' ? 'draft.approve' : 'draft.send', {
     accountId: d.accountId,

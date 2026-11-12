@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
-import { clearSession, issueSession, readSession, requireSession, type AppEnv } from '../auth/index.js';
+import { clearSession, issueSession, readSession, requireSession, revokeSessions, type AppEnv } from '../auth/index.js';
 import { db } from '../db/index.js';
 import { users } from '../db/schema.js';
 import { audit, requestIp } from '../lib/audit.js';
@@ -104,17 +104,22 @@ export const authRoutes = new Hono<AppEnv>()
   .post('/setup', async (c) => {
     const body = credentials.safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) return c.json({ error: body.error.issues[0]?.message }, 400);
+    // 已经初始化过就直接拒绝，不白算哈希；哈希比较慢，放在锁外面算
+    if (await db.$count(users)) return c.json({ error: t().common.auth.alreadySetup }, 409);
+    const passwordHash = await hashPassword(body.data.password);
     const created = await db.transaction(async (tx) => {
+      // 事务级咨询锁让并发的初始化请求排队：否则两个请求都看到 0 个用户，会各建一个管理员
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext('damail:setup'))`);
       const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(users);
       if (count > 0) return null;
       const [u] = await tx
         .insert(users)
-        .values({ username: body.data.username, passwordHash: await hashPassword(body.data.password), locale: normalizeLocale(body.data.locale) ?? 'zh-CN' })
+        .values({ username: body.data.username, passwordHash, locale: normalizeLocale(body.data.locale) ?? 'zh-CN' })
         .returning();
       return u;
     });
     if (!created) return c.json({ error: t().common.auth.alreadySetup }, 409);
-    issueSession(c, created);
+    await issueSession(c, created);
     await rememberUserLocale(created.id, created.locale as Locale);
     audit(`user:${created.id}`, 'auth.setup', { detail: { username: created.username } });
     return c.json(publicUser(created));
@@ -133,7 +138,8 @@ export const authRoutes = new Hono<AppEnv>()
       return c.json({ error: t().common.auth.wrongCredentials }, 401);
     }
     attemptSucceeded(keys);
-    issueSession(c, user);
+    // 校验期间密码被改了：校验过的是旧密码，不签发
+    if (!(await issueSession(c, user))) return c.json({ error: t().common.auth.wrongCredentials }, 401);
     audit(`user:${user.id}`, 'auth.login');
     return c.json(publicUser(user));
   })
@@ -157,10 +163,11 @@ export const authRoutes = new Hono<AppEnv>()
     }
     const [updated] = await db
       .update(users)
-      .set({ ...(renamed ? { username } : {}), ...(newPassword ? { passwordHash: await hashPassword(newPassword) } : {}) })
+      // 改密码时纪元也加一：其他设备的会话失效，并保证「纪元相同 = 密码哈希相同」，会话缓存只需比较纪元
+      .set({ ...(renamed ? { username } : {}), ...(newPassword ? { passwordHash: await hashPassword(newPassword), sessionEpoch: sql`${users.sessionEpoch} + 1` } : {}) })
       .where(eq(users.id, user.id))
       .returning();
-    if (newPassword) issueSession(c, updated!);
+    if (newPassword) await issueSession(c, updated!);
     audit(`user:${user.id}`, 'user.update', { detail: { username: renamed ? username : undefined, password: Boolean(newPassword) } });
     return c.json(publicUser(updated!));
   })
@@ -174,8 +181,13 @@ export const authRoutes = new Hono<AppEnv>()
     return c.json(publicUser(updated));
   })
   .post('/logout', async (c) => {
+    // 和其他写请求一样要求 x-damail 头：退出会让所有设备下线，不能被同站的其他页面伪造请求触发
+    if (c.req.header('x-damail') !== '1') return c.json({ error: 'missing x-damail header' }, 403);
     const uid = await readSession(c);
-    if (uid) audit(`user:${uid}`, 'auth.logout');
+    if (uid) {
+      await revokeSessions(uid);
+      audit(`user:${uid}`, 'auth.logout');
+    }
     clearSession(c);
     return c.json({ ok: true });
   });

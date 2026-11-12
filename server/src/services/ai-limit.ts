@@ -5,7 +5,8 @@
  *   连续限流时暂停时间翻倍，成功一次后恢复。
  * 只在本进程内生效。
  */
-import { RetryableError } from './jobs.js';
+import { L } from '../i18n/index.js';
+import { DeferredError, RetryableError } from './jobs.js';
 
 /** 被限流（HTTP 429）：retryAfterMs 是服务商要求等待的时间（如果给了） */
 export class RateLimitError extends RetryableError {
@@ -63,11 +64,20 @@ const sleep = (ms: number, signal?: AbortSignal) =>
 
 type Channel = { channelId: string | null; concurrency?: number | null };
 
+// 渠道没设并发上限时的默认值：不能无限制，否则一个泄露的令牌就能同时发出大量计费请求
+export const DEFAULT_AI_CONCURRENCY = 10;
+// 每个渠道最多排队这么多请求，再多直接拒绝，避免等待中的请求占满内存
+const MAX_WAITERS = 200;
+
+// 后台任务推迟后再试（不消耗重试次数）；网页助手直接把原因显示给用户
+export class AiQueueFullError extends DeferredError {}
+
 /** 占一个请求名额，返回释放函数；渠道暂停中会一直等到暂停结束 */
 export async function acquireAiSlot(c: Channel, signal?: AbortSignal): Promise<() => void> {
   const g = gateOf(c.channelId ?? '');
-  const limit = c.concurrency && c.concurrency > 0 ? c.concurrency : Infinity;
+  const limit = c.concurrency && c.concurrency > 0 ? c.concurrency : DEFAULT_AI_CONCURRENCY;
   while (g.active >= limit) {
+    if (g.waiters.length >= MAX_WAITERS) throw new AiQueueFullError(L('AI 请求排队太多，请稍后再试', 'Too many AI requests are queued; try again later'));
     await new Promise<void>((resolve, reject) => {
       const wake = () => {
         signal?.removeEventListener('abort', abort);

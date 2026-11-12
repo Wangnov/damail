@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { attachmentUrl, type MessageDetail } from '../api';
 import { t } from '../i18n';
+import { rewriteCids } from '../lib/cid';
 
 const REMOTE_PATTERN = /(?:src|background|srcset)\s*=\s*["']?\s*(?:https?:)?\/\/|url\(\s*["']?\s*(?:https?:)?\/\//i;
 
@@ -25,12 +26,7 @@ function textToHtml(text: string) {
  * - iframe 不给 allow-scripts，即使清洗遗漏也无法执行脚本
  */
 function buildSrcDoc(message: MessageDetail, allowRemote: boolean) {
-  let html = message.html ?? textToHtml(message.text ?? '');
-  for (const att of message.attachments) {
-    if (!att.cid) continue;
-    const cid = att.cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    html = html.replace(new RegExp(`cid:${cid}`, 'gi'), attachmentUrl(message.id, att.index, true));
-  }
+  const html = rewriteCids(message.html ?? textToHtml(message.text ?? ''), message.attachments, (index) => attachmentUrl(message.id, index, true));
   const clean = DOMPurify.sanitize(html, {
     FORCE_BODY: true,
     WHOLE_DOCUMENT: false,
