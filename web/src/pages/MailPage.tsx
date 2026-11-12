@@ -1,42 +1,15 @@
-import { BulbOutlined, QuestionCircleOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Empty, Flex, Grid, Input, Popover, Splitter, Tooltip, Typography, theme } from 'antd';
-import { useEffect, useState } from 'react';
+import { Button, Empty, Flex, Grid, Splitter, Typography, theme } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router';
 import { AiSearchResults } from '../components/AiSearchResults';
+import { SearchBox, SearchConditions, searchLang } from '../components/SearchBox';
 import { ThreadList } from '../components/ThreadList';
 import { ThreadView } from '../components/ThreadView';
 import { useAccounts, useFolders, useLabels } from '../hooks/data';
 import { labelHasName, labelName as nameOf } from '../components/Labels';
 import { folderLabel } from '../lib/format';
-import { categoryOfQuery, labelOfQuery, normalizeQuery } from '../lib/search';
+import { categoryOfQuery, labelOfQuery, localizeQuery, normalizeQuery } from '../lib/search';
 import { CATEGORY_META } from '../components/Insight';
-import { t } from '../i18n';
-
-// 中文写法提交时会换成英文语法（见 lib/search.ts），两种写法都能用；说明按界面语言显示一种
-function SearchHelp() {
-  const h = t.mail.help;
-  const rows = (lines: string[][]) =>
-    lines.map((line, i) => (
-      <div key={i}>
-        {line.map((code) => (
-          <Typography.Text key={code} code style={{ marginInlineEnd: 4 }}>
-            {code}
-          </Typography.Text>
-        ))}
-      </div>
-    ));
-  return (
-    <div style={{ maxWidth: 380, lineHeight: 1.9 }}>
-      {rows(h.basic)}
-      <Typography.Text type="secondary">{h.withAi}</Typography.Text>
-      {rows(h.ai)}
-      <Typography.Text type="secondary" style={{ display: 'block' }}>
-        {h.categories}
-      </Typography.Text>
-      <Typography.Text type="secondary">{h.alt}</Typography.Text>
-    </div>
-  );
-}
+import { t, useLocale } from '../i18n';
 
 export function MailPage() {
   const { token } = theme.useToken();
@@ -50,8 +23,7 @@ export function MailPage() {
   const q = params.get('q') ?? '';
   // AI 搜索：自然语言描述，由模型理解后筛选
   const aiMode = params.get('ai') === '1' && Boolean(q);
-  const [input, setInput] = useState(q);
-  useEffect(() => setInput(q), [q]);
+  const lang = searchLang(useLocale());
 
   const view = params.get('view') ?? 'inbox';
   const accountId = params.get('account');
@@ -76,7 +48,10 @@ export function MailPage() {
     // 链接里可能是另一种语言的名称，标题按当前语言显示
     const label = labels.data?.find((l) => labelHasName(l, labelName));
     title = t.mail.labelTitle(label ? nameOf(label) : labelName);
-  } else if (q) title = aiMode ? t.mail.aiSearchTitle(q) : t.mail.searchTitle(q);
+  } else if (q) title = aiMode ? t.mail.aiSearchTitle(q) : t.mail.searchTitle(localizeQuery(q, lang));
+
+  // 正在搜索时标题是「搜索：…」，窄屏占位符不再拿它拼「搜索搜索：…」
+  const searching = Boolean(q) && !category && !labelName;
 
   const setParam = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
@@ -134,42 +109,14 @@ export function MailPage() {
             {title}
           </Typography.Title>
         )}
-        <Input
-          className="mail-search"
-          variant="filled"
-          allowClear
-          placeholder={aiMode ? t.mail.aiPlaceholder : narrow ? t.mail.searchIn(title) : t.mail.searchAll}
-          prefix={<SearchOutlined />}
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            // 点清除按钮：同时清掉搜索结果
-            if (!e.target.value && e.type !== 'change' && q) onSearch('');
-          }}
-          onPressEnter={() => onSearch(input)}
-          suffix={
-            <Flex align="center" gap={2}>
-              <Tooltip title={aiMode ? t.mail.backToPlain : t.mail.aiSearchHint}>
-                <Button
-                  size="small"
-                  type="text"
-                  className={`mail-search-ai${aiMode ? ' on' : ''}`}
-                  icon={<BulbOutlined />}
-                  aria-pressed={aiMode}
-                  disabled={!aiMode && !input.trim()}
-                  onClick={() => onSearch(aiMode ? q : input, !aiMode)}
-                >
-                  {!narrow && t.mail.aiSearch}
-                </Button>
-              </Tooltip>
-              <Popover content={<SearchHelp />} title={t.mail.searchSyntax} placement="bottomRight">
-                <Button size="small" type="text" className="mail-search-help" icon={<QuestionCircleOutlined />} aria-label={t.mail.searchSyntax} />
-              </Popover>
-            </Flex>
-          }
-          style={{ maxWidth: 600, marginLeft: 'auto' }}
-        />
+        <SearchBox q={q} aiMode={aiMode} narrow={narrow} placeholder={aiMode ? t.mail.aiPlaceholder : narrow && !searching ? t.mail.searchIn(title) : t.mail.searchAll} onSearch={onSearch} />
       </Flex>
+      {/* 搜索条件标签；侧栏点进来的单个分类、标签筛选标题已经写明，不再重复 */}
+      {searching && !aiMode && (
+        <div style={{ padding: '6px 16px', borderBottom: `1px solid ${token.colorSplit}`, flex: 'none' }}>
+          <SearchConditions q={q} onChange={(next) => onSearch(next, false)} />
+        </div>
+      )}
       {narrow ? (
         <div style={{ flex: 1, minHeight: 0 }}>
           {selected ? (

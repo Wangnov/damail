@@ -8,7 +8,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "db:generate": "pnpm --filter server db:generate",
-    "test": "pnpm --filter server test",
+    "test": "pnpm --filter web test && pnpm --filter server test",
     "release": "node scripts/release.mjs"
   },
   "packageManager": "pnpm@12.6.0"
