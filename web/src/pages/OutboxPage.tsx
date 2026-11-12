@@ -151,9 +151,10 @@ export function OutboxPage() {
               },
               {
                 title: '',
-                width: current.key === 'pending' ? 210 : 130,
+                // 表格是固定列宽：要放下英文「Review」「Reject」两个带图标的按钮（大尺寸组件也够）
+                width: current.key === 'pending' ? 264 : 130,
                 render: (_, d) => (
-                  <Flex gap={8} justify="flex-end" align="center">
+                  <Flex gap={8} justify="flex-end" align="center" style={{ whiteSpace: 'nowrap' }}>
                     {d.status === 'pending' && (
                       <>
                         <Button type="primary" icon={<EyeOutlined />} onClick={() => compose({ draftId: d.id })}>
