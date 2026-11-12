@@ -14,7 +14,7 @@ export type MoveTarget = 'inbox' | 'archive' | 'trash' | 'junk' | { folderId: nu
 export class ActionError extends Error {
   constructor(
     message: string,
-    readonly status: 400 | 403 | 404 | 409 | 429 = 400,
+    readonly status: 400 | 403 | 404 | 409 | 429 | 502 = 400,
   ) {
     super(message);
   }

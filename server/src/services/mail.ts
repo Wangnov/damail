@@ -10,6 +10,7 @@ import { unsubscribeInfoFor } from './subscriptions.js';
 import { translationsFor } from './translate.js';
 import { labelsForMessages, labelsForThreads } from './labels.js';
 import { L } from '../i18n/index.js';
+import { completeMessage } from './message-source.js';
 
 /** 访问范围：API Key 可以限定只能看某些账户，null 表示全部 */
 export type Scope = { accountIds: number[] | null };
@@ -362,6 +363,8 @@ export async function getMessage(scope: Scope, id: number): Promise<MessageDetai
 
 /** 补上跟进提醒和退订信息 */
 async function withExtras(rows: { m: Message; accountEmail: string; folderPath: string; folderSpecialUse: string | null; insight: MessageInsight | null }[]) {
+  // 在详情里列出完整附件，避免预览末尾之外的附件不可见。
+  for (const row of rows) if (row.m.truncated) row.m = await completeMessage(row.m);
   const [fus, unsub, translations, labelMap] = await Promise.all([
     followUpsFor(rows.map((r) => r.m)),
     unsubscribeInfoFor(rows.map((r) => r.m)),
@@ -414,8 +417,10 @@ export async function getThreadSubject(scope: Scope, threadId: string) {
 }
 
 export async function getAttachment(scope: Scope, messageId: number, index: number) {
-  const msg = await db.query.messages.findFirst({ where: eq(messages.id, messageId) });
-  if (!msg || !inScope(scope, msg.accountId) || !msg.rawPath) return null;
+  const stored = await db.query.messages.findFirst({ where: eq(messages.id, messageId) });
+  if (!stored || !inScope(scope, stored.accountId)) return null;
+  const msg = await completeMessage(stored);
+  if (!msg.rawPath) return null;
   const raw = await readRaw(msg.rawPath);
   // 快速路径：只解码目标附件；和入库时记录的大小一致才采用，否则退回完整解析
   const meta = msg.attachments[index];
@@ -444,8 +449,10 @@ export async function getAttachment(scope: Scope, messageId: number, index: numb
 }
 
 export async function getRaw(scope: Scope, messageId: number) {
-  const msg = await db.query.messages.findFirst({ where: eq(messages.id, messageId) });
-  if (!msg || !inScope(scope, msg.accountId) || !msg.rawPath) return null;
+  const stored = await db.query.messages.findFirst({ where: eq(messages.id, messageId) });
+  if (!stored || !inScope(scope, stored.accountId)) return null;
+  const msg = await completeMessage(stored);
+  if (!msg.rawPath) return null;
   return readRaw(msg.rawPath);
 }
 

@@ -30,7 +30,7 @@ Messages about the same thing are grouped into **threads**, including replies yo
 - With AI on, the **AI summary** card at the top shows the summary, codes, amounts, due dates, tracking numbers and to-dos
 - Click **Translate** for foreign-language mail — see [Translation](/docs/ai/translate/)
 - Download the original message (`.eml`)
-- Messages larger than `MAX_MESSAGE_MB` (30 MB by default) only sync their first 2 MB, with a note that attachments may be incomplete
+- Background sync stores a 2 MB preview for messages larger than `MAX_MESSAGE_MB` (30 MB by default). Opening details or downloading an attachment or raw message fetches and caches the complete original. If the provider is unavailable, the request fails and can be retried rather than returning a truncated file as complete
 
 ## Writing mail
 

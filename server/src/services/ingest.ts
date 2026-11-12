@@ -7,10 +7,12 @@ import { convert as htmlToText } from 'html-to-text';
 import { simpleParser, type AddressObject, type ParsedMail } from 'mailparser';
 import { config } from '../config.js';
 import { db } from '../db/index.js';
-import { messages, type Address, type AttachmentMeta } from '../db/schema.js';
+import { messages, type Address, type AttachmentMeta, type Message } from '../db/schema.js';
 import { sha256 } from '../lib/crypto.js';
 import { withBodyUnsubscribe } from '../lib/body-unsubscribe.js';
 import { parseListHeaders } from '../lib/list-headers.js';
+import { ActionError } from './actions.js';
+import { L } from '../i18n/index.js';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -71,6 +73,59 @@ function collapse(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
+function messageBody(parsed: ParsedMail | null) {
+  const html = parsed?.html || null;
+  let text = parsed?.text ?? null;
+  if (!text && html) text = htmlToText(html, { wordwrap: false, selectors: [{ selector: 'img', format: 'skip' }] });
+  const attachments: AttachmentMeta[] = (parsed?.attachments ?? []).map((a, index) => {
+    const cid = a.contentId ? a.contentId.replace(/^<|>$/g, '') : null;
+    return {
+      index,
+      filename: a.filename ?? null,
+      contentType: a.contentType,
+      size: a.size,
+      cid,
+      inline: Boolean(cid && (a.contentDisposition === 'inline' || a.related)),
+    };
+  });
+  return { html, text, attachments };
+}
+
+/** 按需补齐预览，只更新正文和附件；保留邮件 ID、会话、标记和已有分析。 */
+export async function restoreMessageContent(message: Message, source: Buffer): Promise<Message> {
+  const parsed = await parseRaw(source);
+  if (message.messageId && parsed.messageId !== message.messageId)
+    throw new ActionError(L('原始邮件标识已变化，请重新同步', 'The original Message-ID changed; sync the mailbox again'), 409);
+  const { html, text, attachments } = messageBody(parsed);
+  const rawPath = await storeRaw(message.accountId, source);
+  const searchText = [
+    message.subject,
+    message.fromName,
+    message.fromAddress,
+    ...[...message.to, ...message.cc].flatMap((a) => [a.name, a.address]),
+    attachments.map((a) => a.filename).join(' '),
+    text,
+  ].filter(Boolean).join('\n').slice(0, 30000);
+  const [updated] = await db
+    .update(messages)
+    .set({
+      textBody: text,
+      htmlBody: html,
+      snippet: collapse(text ?? '').slice(0, 200),
+      attachments,
+      hasAttachments: attachments.some((a) => !a.inline),
+      searchText,
+      rawPath,
+      size: source.length,
+      truncated: false,
+      listInfo: withBodyUnsubscribe(parseListHeaders(source), { subject: message.subject, inReplyTo: message.inReplyTo, htmlBody: html, textBody: text }),
+    })
+    .where(and(eq(messages.id, message.id), eq(messages.folderId, message.folderId), eq(messages.uid, message.uid)))
+    .returning();
+  if (!updated) throw new ActionError(L('邮件已移动或删除，请刷新后重试', 'The message was moved or deleted; refresh and retry'), 404);
+  return updated;
+}
+
 /**
  * 归并会话：Gmail 直接用服务器给的 X-GM-THRID；
  * 其他服务商按 Message-ID / In-Reply-To / References 关联，必要时合并已有会话。
@@ -113,21 +168,7 @@ export async function ingestMessage(input: IncomingMessage): Promise<{ id: numbe
     console.warn(`[ingest] 解析失败 account=${input.accountId} uid=${input.uid}:`, (err as Error).message);
   }
 
-  const html = parsed?.html || null;
-  let text = parsed?.text ?? null;
-  if (!text && html) text = htmlToText(html, { wordwrap: false, selectors: [{ selector: 'img', format: 'skip' }] });
-
-  const attachments: AttachmentMeta[] = (parsed?.attachments ?? []).map((a, index) => {
-    const cid = a.contentId ? a.contentId.replace(/^<|>$/g, '') : null;
-    return {
-      index,
-      filename: a.filename ?? null,
-      contentType: a.contentType,
-      size: a.size,
-      cid,
-      inline: Boolean(cid && (a.contentDisposition === 'inline' || a.related)),
-    };
-  });
+  const { html, text, attachments } = messageBody(parsed);
 
   const from = flattenAddresses(parsed?.from)[0];
   const to = flattenAddresses(parsed?.to);

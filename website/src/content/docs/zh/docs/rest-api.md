@@ -5,6 +5,8 @@ description: REST API、收信规则格式和 Webhook
 
 所有接口都接受 `Authorization: Bearer <API Key>`，也可以用网页登录态访问。权限要求和 [MCP](/zh/docs/mcp/#权限) 一致，括号里标注了需要的权限。
 
+邮件详情、附件和原始 `.eml` 接口会按需补齐被后台截断的邮件，再返回完整内容；首次读取大邮件可能较慢，后续读取使用本地缓存。失败时返回错误，客户端可以重试。
+
 ## 邮件
 
 | 方法 | 路径 | 说明 |
@@ -52,6 +54,14 @@ description: REST API、收信规则格式和 Webhook
 | POST | `/api/v1/rules/test` | 试运行，返回会命中的邮件，不执行动作（automation） |
 | POST | `/api/v1/rules/reorder` | `{ids}` 调整执行顺序（automation） |
 | GET | `/api/v1/channels` | 通知渠道列表，不含配置（automation） |
+
+忽略名单接口（均需 `automation` 权限且能访问全部邮箱）：
+
+- `GET /api/v1/ignored-senders`：列出忽略名单
+- `POST /api/v1/ignored-senders`：添加 `{pattern}`，如 `{"pattern":"@example.com"}`
+- `DELETE /api/v1/ignored-senders/:pattern`：删除忽略项，路径参数需 URL 编码
+
+名单对全部邮箱生效，限定邮箱的 Key 不能读取或修改；添加时会清除匹配发件人的已有 AI 分析，与 MCP 工具一致。邮箱接入、凭据等管理设置仍通过网页管理。
 
 规则格式：
 

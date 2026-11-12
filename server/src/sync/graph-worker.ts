@@ -68,6 +68,7 @@ export class GraphWorker {
     this.running = false;
     for (const t of this.timers) clearInterval(t);
     this.timers = [];
+    await this.draining;
   }
 
   requestSync(kind: Exclude<SyncKind, 'none'>) {
@@ -179,13 +180,12 @@ export class GraphWorker {
   }
 
   private initialDeltaUrl(folder: Folder) {
-    const since = new Date(Date.now() - this.syncDays * 86400_000).toISOString();
     const q = new URLSearchParams({
       $select: 'id,isRead,flag,receivedDateTime',
-      $filter: `receivedDateTime ge ${since}`,
       // 首次回溯时最新邮件最先可见
       $orderby: 'receivedDateTime desc',
     });
+    if (this.syncDays !== 0) q.set('$filter', `receivedDateTime ge ${new Date(Date.now() - this.syncDays * 86400_000).toISOString()}`);
     return `/me/mailFolders/${folder.remoteId}/messages/delta?${q}`;
   }
 

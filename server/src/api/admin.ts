@@ -37,7 +37,8 @@ const accountInput = z.object({
   smtpSecure: z.boolean().nullish(),
   username: z.string().trim().min(1),
   secret: z.string().min(1, { error: () => L('请填写授权码 / 密码', 'Enter the authorization code / password') }),
-  syncSinceDays: z.coerce.number().int().min(1).max(3650).default(90),
+  // 0 表示全部历史；显式天数仍保留合理上限。
+  syncSinceDays: z.coerce.number().int().min(0).max(36500).default(90),
   // 轮询间隔（秒），null 用默认；最短 1 分钟，避免频繁连接被邮件服务商限流
   pollIntervalSec: z
     .number()
@@ -154,8 +155,21 @@ export const adminRoutes = new Hono<AppEnv>()
     if (data.email) patch.email = data.email.toLowerCase();
     // 填了新密码就改回密码认证和 IMAP 收信（OAuth 账户重新授权走 /api/oauth）
     if (secret) Object.assign(patch, { secretEnc: encryptSecret(secret), authType: 'password', protocol: 'imap' });
-    const [row] = await db.update(accounts).set(patch).where(eq(accounts.id, id)).returning();
-    if (!row) return c.json({ error: 'not found' }, 404);
+    const existing = await db.query.accounts.findFirst({ where: eq(accounts.id, id) });
+    if (!existing) return c.json({ error: 'not found' }, 404);
+    const backfill =
+      data.syncSinceDays !== undefined && existing.syncSinceDays !== 0 &&
+      (data.syncSinceDays === 0 || data.syncSinceDays > existing.syncSinceDays);
+    // 等正在运行的同步退出，避免它覆盖重置后的进度。
+    if (backfill) await syncEngine.stopAccount(id);
+    const row = await db.transaction(async (tx) => {
+      const [updated] = await tx.update(accounts).set(patch).where(eq(accounts.id, id)).returning();
+      if (backfill) await tx.update(folders).set({ lastUid: 0, highestModseq: null, deltaLink: null }).where(eq(folders.accountId, id));
+      return updated!;
+    }).catch((err) => {
+      if (backfill && existing.enabled) syncEngine.startAccount(id);
+      throw err;
+    });
     if (row.enabled) await syncEngine.restartAccount(id);
     else await syncEngine.stopAccount(id);
     return c.json(publicAccount(row));

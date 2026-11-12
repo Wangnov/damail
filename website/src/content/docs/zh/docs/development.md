@@ -34,6 +34,14 @@ pnpm test        # 服务端集成测试，使用独立的 damail_test 数据库
 
 测试只访问本机数据库，不连真实邮箱、不访问外网、不发信。
 
+启动上述开发容器后，还可以验收真实 IMAP 的历史回补与大邮件下载：
+
+```bash
+pnpm --filter server exec tsx scripts/verify-mail-completeness.ts
+```
+
+该脚本使用独立的 `damail_imap_test` 测试库及 GreenMail，追加一封 2010 年的邮件和一封超过 30 MB 的邮件，检查回补、PDF 下载、原始 MIME 的 SHA-256、远端未读状态及 UIDVALIDITY 变化保护。脚本不会连接真实邮箱或发送 SMTP 邮件。
+
 ## 项目结构
 
 ```txt
