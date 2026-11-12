@@ -12,7 +12,7 @@ Go to **AI → Models**. Setup has two steps: add a **channel** (provider + endp
 Click **Add channel**:
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | Name | Anything you like, such as "Claude" or "DeepSeek" |
 | Provider | **Anthropic** or **OpenAI-compatible API** |
 | Base URL | Leave empty for the official Anthropic API, or enter an Anthropic-compatible proxy. Required for OpenAI-compatible APIs; DaMail calls `{Base URL}/chat/completions` and `{Base URL}/models` |
@@ -26,7 +26,7 @@ You can add several channels — for example a cheap DeepSeek channel for analys
 ### Common providers
 
 | Provider | Type | Base URL |
-|---|---|---|
+| --- | --- | --- |
 | Anthropic Claude | Anthropic | Leave empty |
 | OpenAI | OpenAI-compatible | `https://api.openai.com/v1` |
 | DeepSeek | OpenAI-compatible | `https://api.deepseek.com` |
@@ -43,7 +43,7 @@ Inside a container, `localhost` is the container itself. If Ollama runs on the h
 There are three model settings at the bottom of the page:
 
 | Setting | Used for | Tip |
-|---|---|---|
+| --- | --- | --- |
 | **Default model** | Categorizing and summarizing new mail, the AI brief in reports, AI search, label suggestions | Pick something cheap and fast if you get a lot of mail |
 | **AI assistant** | The chat panel in the corner | Needs tool calling; a stronger model works better |
 | **Translation** | The **Translate** button on a message | Can use its own channel and model, with a target language |

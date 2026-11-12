@@ -16,7 +16,7 @@ ChatGPT 自定义 MCP 连接器要求标准 OAuth。用户在 ChatGPT 添加 DaM
 三条认证链路互相独立：
 
 | 链路 | 方向 | 凭证 | 说明 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 邮件服务商 OAuth（`/api/oauth/{google,microsoft}/*`） | DaMail → Gmail / Microsoft | 服务商的 refresh token（加密存储） | **未改动**，不能拿来当 ChatGPT 的凭证 |
 | MCP OAuth（本次新增，`/oauth/*`） | ChatGPT → DaMail `/mcp` | DaMail 签发的 opaque token | 只能访问 `/mcp`，访问 `/api/v1` 一律 401 |
 | API Key / 网页会话 | Agent / 浏览器 → DaMail | `dm_` 开头的 Key / Cookie | 行为不变 |
@@ -28,7 +28,7 @@ ChatGPT 自定义 MCP 连接器要求标准 OAuth。用户在 ChatGPT 添加 DaM
 - **客户端**：ChatGPT。只接受 `MCP_OAUTH_CIMD_CLIENTS` 精确列出的 client_id URL（CIMD）或 `MCP_OAUTH_STATIC_CLIENTS` 预注册的 client；回调地址只接受 `MCP_OAUTH_REDIRECT_URIS` 与预注册客户端里精确列出的值
 
 | 路径 | 作用 |
-|---|---|
+| --- | --- |
 | `GET /.well-known/oauth-protected-resource/mcp`（以及根路径 `/.well-known/oauth-protected-resource`） | RFC 9728 受保护资源元数据 |
 | `GET /.well-known/oauth-authorization-server`、`/.well-known/openid-configuration` | 授权服务器元数据 |
 | `GET /oauth/authorize` | 授权端点 |
@@ -43,7 +43,7 @@ ChatGPT 自定义 MCP 连接器要求标准 OAuth。用户在 ChatGPT 添加 DaM
 ## 3. 权限（scope）
 
 | OAuth scope | 内部权限 | 能做什么 | 可见的 MCP 工具 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `mail:read` | read | 读邮件、会话、附件、草稿、统计、日报、通讯录 | `list_accounts` `list_folders` `semantic_search` `search_emails` `get_email` `get_thread` `get_attachment` `get_stats` `list_waiting` `list_subscriptions` `list_contacts` `translate_email` `get_report` `list_reports` `list_drafts` `get_draft` |
 | `mail:organize` | organize | 标记、移动、跟进提醒 | `mark_emails` `move_emails` `set_follow_up` `clear_follow_up` |
 | `mail:draft` | draft | 写草稿、提交网页审批、撤销 | `create_draft` `update_draft` `delete_draft` `request_send` `cancel_send` |
@@ -132,7 +132,7 @@ COMMIT;
 常改的设置在网页「开放接口 → OAuth 设置」里，**保存后立即生效，不需要重启**：
 
 | 网页设置 | 说明 |
-|---|---|
+| --- | --- |
 | 启用 | 关闭后 `/oauth/*` 和元数据 404，已签发的令牌立即不能用；授权记录保留，重新开启后恢复 |
 | 允许的客户端 | 元数据文档（CIMD，如 ChatGPT）或预注册客户端；**每个客户端各自绑定回调地址**，A 不能使用 B 的回调。添加 CIMD 客户端时服务器读取它的文档（可经代理），列出名称和声明的回调地址，按客户端页面上显示的勾选 |
 | 代理选择 | 读取客户端文档和公钥走哪个代理（「代理设置」里的代理） |
@@ -204,7 +204,7 @@ pnpm test
 
 - 登录页、同意页渲染（当前账号、切换账号、三个权限及 send 警示、邮箱范围），真实浏览器提交成功（修复了 `no-referrer` 导致浏览器发送 `Origin: null` 被 CSRF 拦截的问题）
 - 取消 send、只选工作邮箱 → 回调 `?code=…&state=preview-1&iss=http%3A%2F%2Flocalhost%3A18787`
-- 网页「开放接口 → OAuth 授权」列表显示该授权（读取邮件 + 写草稿、work@local.test），撤销后显示“已撤销”
+- 网页「开放接口 → OAuth 授权」列表显示该授权（读取邮件 + 写草稿、<work@local.test>），撤销后显示“已撤销”
 - `pnpm -r typecheck`、`pnpm --filter web build` 通过
 
 ### 未测试
