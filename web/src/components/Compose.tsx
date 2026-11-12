@@ -367,8 +367,9 @@ function ComposeDrawer({
   const [customAt, setCustomAt] = useState<Dayjs | null>(null);
 
   const send = async (sendAt?: Dayjs) => {
-    // 点击时界面上的附件快照：保存期间缓存可能被实时事件刷新（比如 Agent 刚加了附件），不能拿刷新后的缓存来比
-    const reviewedAttachments = (qc.getQueryData<Draft>(['draft', draftId])?.attachments ?? []).map((a) => a.path).join('\n');
+    // 用户审阅的附件：取这次渲染里显示的 draft（send 是同一次渲染创建的闭包），不读查询缓存。
+    // 缓存可能已被实时事件刷新（比如 Agent 刚加了附件）而界面还没重绘；闭包里的数据只会比屏幕旧，不会比屏幕新
+    const reviewedAttachments = (draft?.attachments ?? []).map((a) => a.path).join('\n');
     const v = form.getFieldsValue(true);
     if (!v.to?.length && !v.cc?.length && !v.bcc?.length) return message.warning(t.compose.needRecipients);
     if (!v.subject?.trim() && !v.body?.trim()) return message.warning(t.compose.emptyMail);

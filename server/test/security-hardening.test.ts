@@ -154,6 +154,17 @@ describe('请求体上限', () => {
     assert.equal(res.status, 413);
   });
 
+  test('邮箱签名允许内嵌图片', async () => {
+    const web = await sessionBrowser();
+    const res = await web.request(`/api/admin/accounts/${env.accounts.work.id}/signature`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', origin: env.base, 'x-damail': '1' },
+      // 字段在 200 万字符以内，但 JSON 转义后请求体约 4 MB，超过普通接口的 2 MB 上限
+      body: JSON.stringify({ signatureHtml: `<p>${'"'.repeat(1_990_000)}</p>` }),
+    });
+    assert.equal(res.status, 200);
+  });
+
   test('草稿接口允许内嵌图片的大正文', async () => {
     const web = await sessionBrowser();
     const res = await web.request(`/api/v1/drafts/${env.drafts.web.id}`, {
@@ -268,7 +279,8 @@ describe('工具函数', () => {
     const { allowsPlaintext } = await import('../src/lib/transport-security.js');
     for (const h of ['127.0.0.1', '127.1.2.3', '::1', '[::1]', '::ffff:127.0.0.1']) assert.equal(allowsPlaintext(h), true, h);
     // 主机名由 DNS 解析，localhost 也可能被解析到远程地址
-    for (const h of ['localhost', 'mail.localhost', 'smtp.example.com', '10.0.0.5', '192.168.1.2', 'localhost.example.com', '127.0.0.1.example.com'])
+    // 不合法的 IPv4 写法会被当成主机名去 DNS 解析，也不算
+    for (const h of ['localhost', 'mail.localhost', 'smtp.example.com', '10.0.0.5', '192.168.1.2', 'localhost.example.com', '127.0.0.1.example.com', '127.999.1.2', '127.0.0.01', '::ffff:10.0.0.1'])
       assert.equal(allowsPlaintext(h), false, h);
     // 经代理时 127.0.0.1 指的是代理那一端，链路也不可信
     assert.equal(allowsPlaintext('127.0.0.1', 'socks5://proxy.example.com:1080'), false);

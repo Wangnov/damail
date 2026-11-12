@@ -370,7 +370,8 @@ export async function updateDraft(auth: AuthContext, id: number, patch: DraftPat
     );
   const data = draftFields.parse(patch);
   const set: Partial<typeof drafts.$inferInsert> = { updatedAt: new Date() };
-  if (data.accountId && data.accountId !== d.accountId) set.accountId = (await loadAccount(auth, data.accountId)).id;
+  // 带了发件账户就总是写入（网页保存时提交的是用户看到的账户），不和读到的值比较后省略
+  if (data.accountId) set.accountId = (await loadAccount(auth, data.accountId)).id;
   if (data.subject !== undefined) set.subject = data.subject;
   if (data.body !== undefined) set.body = data.body;
   // 只改了纯文本正文（例如 Agent 通过 API 修改）时，旧的富文本版本已经过期
@@ -388,11 +389,12 @@ export async function updateDraft(auth: AuthContext, id: number, patch: DraftPat
   }
   // 失败或被拒绝的草稿修改后回到草稿状态，需要重新提交
   if (d.status === 'failed' || d.status === 'rejected') Object.assign(set, { status: 'draft', error: null });
-  // 状态要和读到的一致：避免检查之后草稿已被批准入队，修改却仍然写进待发送的邮件
+  // 状态和版本号都要和读到的一致：避免检查之后草稿已被批准入队、修改却仍然写进待发送的邮件；
+  // 也避免读到之后被别的请求改过（比如换了发件账户），这次保存却在不知情的情况下成功
   const [row] = await db
     .update(drafts)
     .set({ ...set, revision: bumpRevision() })
-    .where(and(eq(drafts.id, id), eq(drafts.status, d.status)))
+    .where(and(eq(drafts.id, id), eq(drafts.status, d.status), eq(drafts.revision, d.revision)))
     .returning();
   if (!row) throw draftChanged();
   publish(row);

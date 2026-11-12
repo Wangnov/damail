@@ -29,7 +29,8 @@ const MB = 1024 * 1024;
 
 /**
  * 请求体大小上限，在任何读取请求体的中间件（审计、解析）之前生效，未登录的请求也不能用超大请求体耗尽内存。
- * 上传附件按附件上限；草稿正文可以内嵌图片（bodyHtml 最长约 12 MB），草稿接口和 MCP 放宽到 16 MB；其他接口 2 MB。
+ * 上传附件按附件上限；草稿正文和邮箱签名可以内嵌图片（bodyHtml 最长约 12 MB、签名 200 万字符），
+ * 这两类接口和 MCP 放宽到 16 MB；其他接口 2 MB。
  */
 function requestBodyLimits(): MiddlewareHandler {
   const onError = (c: Context) => c.json({ error: L('请求内容过大', 'Request body too large') }, 413);
@@ -39,7 +40,7 @@ function requestBodyLimits(): MiddlewareHandler {
   return (c, next) => {
     const p = c.req.path;
     if (/^\/api\/v1\/drafts\/[^/]+\/attachments\/?$/.test(p)) return upload(c, next);
-    if (p.startsWith('/api/v1/drafts') || p === '/mcp') return draft(c, next);
+    if (p.startsWith('/api/v1/drafts') || p === '/mcp' || /^\/api\/admin\/accounts\/[^/]+\/signature\/?$/.test(p)) return draft(c, next);
     return normal(c, next);
   };
 }
