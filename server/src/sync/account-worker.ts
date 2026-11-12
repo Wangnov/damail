@@ -11,6 +11,7 @@ import { onNewMessage } from '../services/pipeline.js';
 import { createImapClient, describeImapError } from './imap.js';
 import { isDefaultSynced, refreshUnread, StatusReporter } from './status.js';
 import { L } from '../i18n/index.js';
+import { isMessageDataError } from '../lib/db-errors.js';
 
 const BATCH = 25;
 const TRUNCATED_BYTES = 2 * 1024 * 1024;
@@ -288,17 +289,26 @@ export class AccountWorker {
 
       for (const { msg, truncated } of fetched) {
         if (!msg.source) continue;
-        const row = await ingestMessage({
-          accountId: this.accountId,
-          folderId: folder.id,
-          uid: msg.uid,
-          source: msg.source,
-          flags: msg.flags ?? new Set(),
-          internalDate: msg.internalDate,
-          size: msg.size,
-          truncated,
-          gmThreadId: client.capabilities.has('X-GM-EXT-1') ? msg.threadId : undefined,
-        });
+        // 邮件数据本身有问题（重试也会失败）时只跳过这一封，否则后面的新邮件永远进不来；
+        // 其他错误（数据库断开、磁盘写满等）照常抛出，中断本次同步、不推进 lastUid，下次重试
+        let row: Awaited<ReturnType<typeof ingestMessage>>;
+        try {
+          row = await ingestMessage({
+            accountId: this.accountId,
+            folderId: folder.id,
+            uid: msg.uid,
+            source: msg.source,
+            flags: msg.flags ?? new Set(),
+            internalDate: msg.internalDate,
+            size: msg.size,
+            truncated,
+            gmThreadId: client.capabilities.has('X-GM-EXT-1') ? msg.threadId : undefined,
+          });
+        } catch (err) {
+          if (!isMessageDataError(err)) throw err;
+          console.warn(`[sync:${this.accountId}] ${folder.path} uid=${msg.uid} 邮件数据无法入库，已跳过：`, (err as Error).message);
+          continue;
+        }
         if (automate && row.inserted) await onNewMessage(row.id, row.date);
       }
       bus.publish({ type: 'messages.new', accountId: this.accountId, folderId: folder.id, count: fetched.length });

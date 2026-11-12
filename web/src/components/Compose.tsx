@@ -218,12 +218,16 @@ function FieldRow({ label, className, children, extra }: { label: string; classN
   );
 }
 
+/**
+ * 保存时提交全部发送字段：收件人列表为空也传 []，服务端才会清空。
+ * 只传部分字段时，服务端会保留没传的字段，可能带上用户没看到的修改（比如 Agent 后来加的密送）。
+ */
 function toBody(v: Partial<Values>) {
   return {
     accountId: v.accountId,
-    to: v.to,
-    cc: v.cc,
-    bcc: v.bcc,
+    to: v.to ?? [],
+    cc: v.cc ?? [],
+    bcc: v.bcc ?? [],
     subject: v.subject,
     body: v.body,
     bodyHtml: v.bodyHtml || null,
@@ -295,6 +299,8 @@ function ComposeDrawer({
   const touched = useRef(false);
   const timer = useRef<number | undefined>(undefined);
   const chain = useRef<Promise<void>>(Promise.resolve());
+  // 最近一次保存后服务器返回的草稿
+  const saved = useRef<Draft | null>(null);
   const save = useCallback(() => {
     window.clearTimeout(timer.current);
     // 上一次保存失败不能卡住后面的保存，否则改正错误后也一直报旧的错
@@ -303,7 +309,8 @@ function ComposeDrawer({
       dirty.current = false;
       setSaveState('saving');
       try {
-        await api(`/api/v1/drafts/${draftId}`, { method: 'PATCH', body: toBody(form.getFieldsValue()) });
+        // getFieldsValue(true) 读整个表单：抄送 / 密送行折叠时字段没挂载，不带 true 会漏掉它们
+        saved.current = await api<Draft>(`/api/v1/drafts/${draftId}`, { method: 'PATCH', body: toBody(form.getFieldsValue(true)) });
         setSaveState('saved');
       } catch (e) {
         dirty.current = true;
@@ -360,14 +367,28 @@ function ComposeDrawer({
   const [customAt, setCustomAt] = useState<Dayjs | null>(null);
 
   const send = async (sendAt?: Dayjs) => {
-    const v = form.getFieldsValue();
+    // 用户审阅的附件：取这次渲染里显示的 draft（send 是同一次渲染创建的闭包），不读查询缓存。
+    // 缓存可能已被实时事件刷新（比如 Agent 刚加了附件）而界面还没重绘；闭包里的数据只会比屏幕旧，不会比屏幕新
+    const reviewedAttachments = (draft?.attachments ?? []).map((a) => a.path).join('\n');
+    const v = form.getFieldsValue(true);
     if (!v.to?.length && !v.cc?.length && !v.bcc?.length) return message.warning(t.compose.needRecipients);
     if (!v.subject?.trim() && !v.body?.trim()) return message.warning(t.compose.emptyMail);
     setBusy('send');
     try {
       dirty.current = true;
       await save();
-      const d = await api<Draft>(`/api/v1/drafts/${draftId}/send`, { method: 'POST', body: sendAt ? { sendAt: sendAt.toISOString() } : {} });
+      // 保存后的版本号随发送请求带上：保存之后草稿又被改过（比如 Agent 改了内容），服务器会拒绝发送
+      const latest = saved.current;
+      if (!latest) throw new Error(t.compose.draftChanged);
+      // 附件不在表单里，保存不会覆盖：和点击时界面上的不一致就说明审阅期间被改过
+      if (latest.attachments.map((a) => a.path).join('\n') !== reviewedAttachments) {
+        qc.setQueryData<Draft>(['draft', draftId], (old) => (old ? { ...old, attachments: latest.attachments } : old));
+        throw new Error(t.compose.draftChanged);
+      }
+      const d = await api<Draft>(`/api/v1/drafts/${draftId}/send`, {
+        method: 'POST',
+        body: { revision: latest.revision, ...(sendAt ? { sendAt: sendAt.toISOString() } : {}) },
+      });
       onSent({ ...d, sendDelaySec: draft?.sendDelaySec }, !!sendAt);
       touched.current = true;
       setScheduleOpen(false);

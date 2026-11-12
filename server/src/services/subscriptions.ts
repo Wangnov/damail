@@ -8,6 +8,7 @@ import { messages, unsubscriptions, type ListInfo, type Message } from '../db/sc
 import { audit } from '../lib/audit.js';
 import { BODY_SCAN_VERSION, needsBodyScan, withBodyUnsubscribe, type BodyFields } from '../lib/body-unsubscribe.js';
 import { parseListHeaders } from '../lib/list-headers.js';
+import { stripNul } from '../lib/strip-nul.js';
 import { OutboundError, safeRequest } from '../lib/safe-fetch.js';
 import { ActionError } from './actions.js';
 import { createDraft, queueDraft } from './drafts.js';
@@ -41,7 +42,7 @@ async function readHead(rawPath: string) {
 async function listInfoFromRaw(rawPath: string | null): Promise<ListInfo> {
   if (!rawPath) return {};
   try {
-    return parseListHeaders(await readHead(rawPath));
+    return stripNul(parseListHeaders(await readHead(rawPath)));
   } catch {
     return {};
   }

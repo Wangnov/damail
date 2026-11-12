@@ -65,6 +65,8 @@ const FLAG_ACTIONS = {
 const sendOptions = z.object({
   delaySec: z.number().int().min(0).max(3600).optional(),
   sendAt: z.coerce.date().optional(),
+  // 网页批准待审批草稿时带上用户审阅的版本号
+  revision: z.number().int().min(0).optional(),
 });
 
 async function body(c: { req: { json: () => Promise<unknown> } }) {

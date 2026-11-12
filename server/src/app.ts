@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { Hono } from 'hono';
+import { Hono, type Context, type MiddlewareHandler } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import { ZodError } from 'zod';
@@ -14,7 +15,7 @@ import { assistantRoutes } from './api/assistant.js';
 import { oauthAdminRoutes, oauthRoutes } from './api/oauth.js';
 import { v1Routes } from './api/v1.js';
 import { config } from './config.js';
-import { localeMiddleware, t } from './i18n/index.js';
+import { L, localeMiddleware, t } from './i18n/index.js';
 import { auditRequests } from './lib/audit.js';
 import { mcpRoutes } from './mcp/server.js';
 import { mcpOAuthAdminRoutes } from './api/mcp-oauth-admin.js';
@@ -24,11 +25,32 @@ import { oauthRoutes as mcpOAuthRoutes } from './oauth/routes.js';
 import { ActionError } from './services/actions.js';
 import { describeImapError } from './sync/imap.js';
 
+const MB = 1024 * 1024;
+
+/**
+ * 请求体大小上限，在任何读取请求体的中间件（审计、解析）之前生效，未登录的请求也不能用超大请求体耗尽内存。
+ * 上传附件按附件上限；草稿正文和邮箱签名可以内嵌图片（bodyHtml 最长约 12 MB、签名 200 万字符），
+ * 这两类接口和 MCP 放宽到 16 MB；其他接口 2 MB。
+ */
+function requestBodyLimits(): MiddlewareHandler {
+  const onError = (c: Context) => c.json({ error: L('请求内容过大', 'Request body too large') }, 413);
+  const upload = bodyLimit({ maxSize: config.maxAttachmentBytes + MB, onError });
+  const draft = bodyLimit({ maxSize: 16 * MB, onError });
+  const normal = bodyLimit({ maxSize: 2 * MB, onError });
+  return (c, next) => {
+    const p = c.req.path;
+    if (/^\/api\/v1\/drafts\/[^/]+\/attachments\/?$/.test(p)) return upload(c, next);
+    if (p.startsWith('/api/v1/drafts') || p === '/mcp' || /^\/api\/admin\/accounts\/[^/]+\/signature\/?$/.test(p)) return draft(c, next);
+    return normal(c, next);
+  };
+}
+
 /** 组装 HTTP 应用（不启动同步、发件等后台任务，测试可以直接使用） */
 export function createApp() {
   const app = new Hono();
 
   app.use('*', localeMiddleware);
+  app.use('*', requestBodyLimits());
   app.use('/api/*', logger());
   app.use('*', secureHeaders({ crossOriginEmbedderPolicy: false, contentSecurityPolicy: undefined }));
 

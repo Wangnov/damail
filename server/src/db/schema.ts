@@ -304,6 +304,8 @@ export const drafts = pgTable(
     sentMessageId: text(),
     // 发出后几天没收到回复就提醒，发送成功时据此创建跟进提醒
     followUpDays: integer(),
+    // 内容版本号：每次修改收件人、正文或附件都加一，网页审批时必须和用户看到的版本一致
+    revision: integer().notNull().default(0),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
