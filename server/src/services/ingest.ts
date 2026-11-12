@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { convert as htmlToText } from 'html-to-text';
@@ -13,6 +13,7 @@ import { withBodyUnsubscribe } from '../lib/body-unsubscribe.js';
 import { parseListHeaders } from '../lib/list-headers.js';
 import { stripNul } from '../lib/strip-nul.js';
 import { ActionError } from './actions.js';
+import { markRawInUse } from './raw-gc.js';
 import { L } from '../i18n/index.js';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -45,10 +46,20 @@ async function storeRaw(accountId: number, source: Buffer): Promise<string> {
   const hash = sha256(source);
   const rel = path.join(String(accountId), hash.slice(0, 2), `${hash}.eml`);
   const abs = path.join(config.rawDir, rel);
-  if (!existsSync(abs)) {
-    await mkdir(path.dirname(abs), { recursive: true });
-    await writeFile(abs, source);
+  // 告诉清理任务这个文件正在使用：入库事务提交前数据库里还查不到引用
+  markRawInUse(rel);
+  if (existsSync(abs)) {
+    // 复用已有文件时刷新修改时间，清理任务按修改时间留宽限期
+    const now = new Date();
+    try {
+      await utimes(abs, now, now);
+      return rel;
+    } catch {
+      // 刚好被删掉了，下面重新写入
+    }
   }
+  await mkdir(path.dirname(abs), { recursive: true });
+  await writeFile(abs, source);
   return rel;
 }
 
