@@ -11,6 +11,7 @@ import { onNewMessage } from '../services/pipeline.js';
 import { createImapClient, describeImapError } from './imap.js';
 import { isDefaultSynced, refreshUnread, StatusReporter } from './status.js';
 import { L } from '../i18n/index.js';
+import { isMessageDataError } from '../lib/db-errors.js';
 
 const BATCH = 25;
 const TRUNCATED_BYTES = 2 * 1024 * 1024;
@@ -288,7 +289,8 @@ export class AccountWorker {
 
       for (const { msg, truncated } of fetched) {
         if (!msg.source) continue;
-        // 单封入库失败只跳过这一封：否则同一封邮件每次同步都失败，后面的新邮件永远进不来
+        // 邮件数据本身有问题（重试也会失败）时只跳过这一封，否则后面的新邮件永远进不来；
+        // 其他错误（数据库断开、磁盘写满等）照常抛出，中断本次同步、不推进 lastUid，下次重试
         let row: Awaited<ReturnType<typeof ingestMessage>>;
         try {
           row = await ingestMessage({
@@ -303,7 +305,8 @@ export class AccountWorker {
             gmThreadId: client.capabilities.has('X-GM-EXT-1') ? msg.threadId : undefined,
           });
         } catch (err) {
-          console.warn(`[sync:${this.accountId}] ${folder.path} uid=${msg.uid} 入库失败，已跳过：`, (err as Error).message);
+          if (!isMessageDataError(err)) throw err;
+          console.warn(`[sync:${this.accountId}] ${folder.path} uid=${msg.uid} 邮件数据无法入库，已跳过：`, (err as Error).message);
           continue;
         }
         if (automate && row.inserted) await onNewMessage(row.id, row.date);
