@@ -63,6 +63,8 @@ export async function collectRawGarbage(opts: { graceMs?: number } = {}): Promis
   for (const acc of await list(config.rawDir)) {
     if (!acc.isDirectory() || !ACCOUNT_DIR.test(acc.name)) continue;
     if (!existing.has(acc.name)) {
+      // 快照之后才新建的邮箱也不在 existing 里，删除前再确认一次（邮箱 id 自增，不会复用）
+      if (await db.$count(accounts, eq(accounts.id, Number(acc.name)))) continue;
       await removeAccountRaw(Number(acc.name));
       result.accounts++;
       continue;
